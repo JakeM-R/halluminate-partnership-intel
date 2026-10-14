@@ -44,6 +44,7 @@ header.top .wrap{display:flex;justify-content:space-between;align-items:center;g
 .brand{font:500 13px var(--mono);color:var(--ink-2)}
 .tabs{display:flex;gap:4px;background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:3px}
 .tabs button{border:0;background:none;font:500 13px var(--sans);color:var(--ink-2);padding:6px 12px;border-radius:6px;cursor:pointer}
+@media (max-width:620px){.tabs .int{display:none}}
 .tabs button[aria-selected="true"]{background:var(--bg);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
 .hero{padding:44px 0 24px}
 h1{font:600 30px/1.2 var(--sans);letter-spacing:-.02em;margin:10px 0 12px}
@@ -150,7 +151,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;font-size:13px;color
   <div class="brand">Expert onboarding <span>· a prototype for Halluminate</span></div>
   <div class="tabs" role="tablist">
     <button role="tab" aria-selected="true" data-tab="expert">Expert view</button>
-    <button role="tab" aria-selected="false" data-tab="operator">Operator view</button>
+    <button role="tab" aria-selected="false" data-tab="operator">Operator <span class="int">(internal)</span></button>
   </div>
 </div></header>
 
@@ -231,6 +232,19 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;font-size:13px;color
         <button class="btn ghost" id="copy">Copy record</button>
         <button class="btn ghost" id="restart">Start again</button>
         <button class="btn ghost" data-tab-go="operator">Operator view →</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="gate" hidden>
+    <section class="panel">
+      <div class="eyebrow">Internal</div>
+      <h2 style="margin-top:6px">Operator view</h2>
+      <p>This is the view your ops team would see: the onboarding funnel, where experts drop out, and which parts of the sample task they miss. In production it sits behind company sign-in. Here it's open, on demo data.</p>
+      <p class="note" id="gate-spoiler"><b>Heads up if you're taking the sample task:</b> this view shows which claims are wrong. Do the review first.</p>
+      <div class="row">
+        <button class="btn" id="gate-continue">Continue as demo operator →</button>
+        <button class="btn ghost" data-tab-go="expert">Back to expert view</button>
       </div>
     </section>
   </div>

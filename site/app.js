@@ -16,11 +16,25 @@
   };
 
   // ---------- tabs and steps ----------
+  // The operator view sits behind a click-through gate: in production it would be
+  // behind company sign-in, and its miss-rate table gives away the answer key.
+  // #operator skips the gate so a reviewer can be linked straight to it.
+  let unlocked = false;
+  try { unlocked = sessionStorage.getItem("hallu-operator") === "1"; } catch (e) {}
+  function unlock() {
+    unlocked = true;
+    try { sessionStorage.setItem("hallu-operator", "1"); } catch (e) {}
+  }
+
   function showTab(name) {
     $$(".tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
-    $("#expert").hidden = name !== "expert";
-    $("#operator").hidden = name !== "operator";
-    if (name === "operator") renderOperator();
+    const op = name === "operator";
+    $("#expert").hidden = op;
+    $("#gate").hidden = !op || unlocked;
+    $("#operator").hidden = !op || !unlocked;
+    if (op && !unlocked) $("#gate-spoiler").hidden = !!state.result;
+    if (op && unlocked) renderOperator();
+    history.replaceState(null, "", op && unlocked ? "#operator" : location.pathname + location.search);
     window.scrollTo({ top: 0 });
   }
   $$(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
@@ -29,6 +43,10 @@
     if (go) goStep(+go.dataset.go);
     const tg = e.target.closest("[data-tab-go]");
     if (tg) showTab(tg.dataset.tabGo);
+  });
+  $("#gate-continue").addEventListener("click", () => { unlock(); showTab("operator"); });
+  window.addEventListener("hashchange", () => {
+    if (location.hash === "#operator") { unlock(); showTab("operator"); }
   });
 
   function goStep(n, scroll = true) {
@@ -239,4 +257,5 @@
 
   renderTask();
   goStep(1, false);
+  if (location.hash === "#operator") { unlock(); showTab("operator"); }
 })();

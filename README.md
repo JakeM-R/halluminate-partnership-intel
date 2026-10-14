@@ -19,6 +19,8 @@ The sample task is **illustrative**. I wrote it from public descriptions of West
 
 A funnel (sourced → started → submitted → ready) with step drop-off, outcome split, and per-claim miss rates. **These are demo figures, labelled as such on the page.** The grader checks at the bottom are real and run in the browser.
 
+The view sits behind a click-through gate ("Continue as demo operator"), because in production it would be behind company sign-in, and its miss-rate table shows which claims are wrong. `#operator` links straight past the gate.
+
 ## How the grading works
 
 `site/grader.js` grades against the rubric and answer key in `site/task.js`. It doesn't call a model, so the same review always gets the same feedback and nothing freestyles on finance reasoning. Errors are weighted by severity (the covenant conclusion is critical), a right catch with the wrong label gets partial credit, and flagging sound claims costs points.
