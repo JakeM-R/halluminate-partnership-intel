@@ -3,332 +3,267 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Partnership Intelligence</title>
-<meta name="description" content="Which organisations are building on finance and knowledge-work agent benchmarks, and which are warming up right now. Live OpenAlex data, refreshed daily.">
+<title>Expert Onboarding</title>
+<meta name="description" content="A working onboarding flow for finance experts: orientation, a sample review task, instant feedback against an answer key, and a readiness call. Prototype by Jake Makking-Robinson.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lilex:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23213547'/><circle cx='10' cy='11' r='3' fill='%239DA3DF'/><circle cx='22' cy='9' r='2.5' fill='%239DA3DF'/><circle cx='17' cy='22' r='4' fill='%233B48BF' stroke='%23fff' stroke-width='1.2'/><path d='M10 11 17 22 22 9' stroke='%23fff' stroke-width='1.2' fill='none'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23213547'/><path d='M9 17l5 5 9-12' stroke='%239DA3DF' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <style>
 :root{
   --bg:#ffffff; --bg-2:#f7f7fa; --line:#e6e7ee; --line-2:#d4d6e2;
-  --ink:#213547; --ink-2:#4d5e70; --ink-3:#8590a0;
-  --indigo:#3b48bf; --lavender:#9da3df; --lav-soft:#eceefb;
-  --g-fin:#3b48bf; --g-know:#7a5cc4; --g-web:#2f8c8c;
+  --ink:#213547; --ink-2:#4d5e70; --ink-3:#7c8797;
+  --accent:#3b48bf; --accent-soft:#eceefb; --accent-ink:#ffffff;
+  --ok:#2f7a55; --ok-soft:#e7f3ec; --bad:#b03a3a; --bad-soft:#f8eaea; --warn:#8a6a1e; --warn-soft:#f6f0e0;
   --sans:"Inter",system-ui,-apple-system,sans-serif; --mono:"Lilex",ui-monospace,Menlo,monospace;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#12161c; --bg-2:#181d25; --line:#252c37; --line-2:#323a47;
-  --ink:#e4e8ef; --ink-2:#aab4c2; --ink-3:#768294;
-  --indigo:#8f9aff; --lavender:#5d64a8; --lav-soft:#1f2440;
-  --g-fin:#8f9aff; --g-know:#b49cf0; --g-web:#6cc4c4;
+  --bg:#12161c; --bg-2:#181d25; --line:#262c37; --line-2:#333b48;
+  --ink:#e4e8ee; --ink-2:#aab3c0; --ink-3:#7d8796;
+  --accent:#8e97ea; --accent-soft:#232945; --accent-ink:#12161c;
+  --ok:#6cc095; --ok-soft:#18291f; --bad:#e08484; --bad-soft:#2d1b1d; --warn:#d6b56a; --warn-soft:#2a2516;
   color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --bg:#12161c; --bg-2:#181d25; --line:#252c37; --line-2:#323a47;
-  --ink:#e4e8ef; --ink-2:#aab4c2; --ink-3:#768294;
-  --indigo:#8f9aff; --lavender:#5d64a8; --lav-soft:#1f2440;
-  --g-fin:#8f9aff; --g-know:#b49cf0; --g-web:#6cc4c4;
+  --bg:#12161c; --bg-2:#181d25; --line:#262c37; --line-2:#333b48;
+  --ink:#e4e8ee; --ink-2:#aab3c0; --ink-3:#7d8796;
+  --accent:#8e97ea; --accent-soft:#232945; --accent-ink:#12161c;
+  --ok:#6cc095; --ok-soft:#18291f; --bad:#e08484; --bad-soft:#2d1b1d; --warn:#d6b56a; --warn-soft:#2a2516;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
-html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
-a{color:var(--indigo);text-decoration:none}
-a:hover{text-decoration:underline}
-.wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:780px;margin:0 auto;padding:0 20px}
+a{color:var(--accent)}
 .mono{font-family:var(--mono)}
-nav.top{display:flex;justify-content:space-between;align-items:center;height:64px;font-size:14px}
-nav.top .name{font-weight:600;letter-spacing:-.01em}
-nav.top .tabs{display:flex;gap:22px}
-nav.top button{appearance:none;background:none;border:0;padding:4px 0;font:inherit;color:var(--ink-3);cursor:pointer;border-bottom:1px solid transparent}
-nav.top button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
-nav.top button .soon{font-family:var(--mono);font-size:11px;color:var(--lavender);margin-left:6px}
-.statement{padding:72px 0 24px;max-width:860px}
-.date{font-family:var(--mono);font-size:13px;color:var(--ink-3)}
-h1{font-weight:500;font-size:clamp(28px,4vw,44px);line-height:1.18;letter-spacing:-.02em;margin:14px 0 18px}
-h1 b{font-weight:500;color:var(--indigo)}
-.lede{color:var(--ink-2);font-size:16px;max-width:66ch;margin:0}
-.facts{display:flex;gap:36px;flex-wrap:wrap;margin:36px 0 0;padding:20px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.facts div b{display:block;font-family:var(--mono);font-weight:500;font-size:24px}
-.facts div span{font-size:13px;color:var(--ink-3)}
-section{padding:56px 0 8px}
-h2{font-weight:500;font-size:22px;letter-spacing:-.01em;margin:0 0 6px}
-.sub{color:var(--ink-2);max-width:72ch;margin:0 0 22px;font-size:14px}
-.own{border-left:2px solid var(--lavender);padding:4px 0 4px 18px;margin-top:40px}
-.own p{margin:0 0 8px;font-size:14px;color:var(--ink-2)}
-.own ul{list-style:none;margin:0;padding:0;font-size:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:2px 24px}
-.own li span{font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-right:10px}
-.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;font-size:13px}
-.chip{appearance:none;border:1px solid var(--line-2);background:var(--bg);color:var(--ink-2);font:13px var(--sans);padding:5px 12px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-.chip[aria-pressed="true"]{border-color:var(--ink);color:var(--ink);background:var(--bg-2)}
-.chip i{width:8px;height:8px;border-radius:2px;display:inline-block}
-.graph{border:1px solid var(--line);border-radius:6px;background:var(--bg);position:relative}
-#graph{display:block;width:100%;height:620px}
-.legend{position:absolute;left:14px;bottom:12px;font-size:12px;color:var(--ink-3);display:flex;gap:16px;flex-wrap:wrap;pointer-events:none}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:50%}
-.graph-mobile{display:none;font-size:14px;color:var(--ink-2);padding:14px 16px;background:var(--bg-2);border-radius:6px}
-.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;line-height:1.45;padding:8px 10px;border-radius:5px;max-width:300px;opacity:0;z-index:20}
-.scroll{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th{text-align:left;font-weight:500;font-size:12px;color:var(--ink-3);padding:10px 12px;border-bottom:1px solid var(--line-2);white-space:nowrap}
-td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
-td.org{font-weight:500;min-width:200px}
-td.benches{min-width:220px;max-width:300px}
-.rise{font-family:var(--mono);font-size:11px;color:var(--indigo);background:var(--lav-soft);padding:1px 6px;border-radius:3px;margin-left:6px}
-.type{font-size:12px;color:var(--ink-2);white-space:nowrap}
-.b{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:3px;margin:0 4px 3px 0;border:1px solid var(--line-2);color:var(--ink-2);white-space:nowrap}
-.paper{font-size:13px;min-width:240px;max-width:340px}
-.paper span{display:block;font-family:var(--mono);font-size:11px;color:var(--ink-3)}
-.vs{font-family:var(--mono);font-size:13px;white-space:nowrap}
-.vs small{color:var(--ink-3)}
-.spark{display:inline-block;width:64px;height:6px;background:var(--line);border-radius:3px;position:relative;vertical-align:middle;margin-left:8px}
-.spark i{position:absolute;left:0;top:0;bottom:0;background:var(--indigo);border-radius:3px}
-.spark u{position:absolute;top:-3px;width:2px;height:12px;background:var(--ink-3)}
-select{font:13px var(--sans);padding:5px 8px;border:1px solid var(--line-2);border-radius:6px;background:var(--bg);color:var(--ink)}
-.more{margin-top:14px}
-.method{max-width:72ch}
-.method h3{font-size:15px;font-weight:600;margin:26px 0 6px}
-.method p,.method li{color:var(--ink-2);font-size:14px}
-.method code{font-family:var(--mono);font-size:12.5px;background:var(--bg-2);padding:1px 5px;border-radius:3px}
-.view[hidden]{display:none}
-.coming{padding:80px 0;max-width:640px}
-.coming p{color:var(--ink-2)}
-footer{margin-top:72px;border-top:1px solid var(--line);padding:24px 0 48px;font-size:13px;color:var(--ink-3)}
-footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
-@media (max-width:720px){
-  .graph{display:none}.graph-mobile{display:block}
-  nav.top .tabs{gap:14px}
-}
-@media (max-width:480px){
+.eyebrow{font:500 12px/1.4 var(--mono);color:var(--ink-3);letter-spacing:.02em;text-transform:uppercase}
+header.top{border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:14px;padding-bottom:14px}
+.brand{font:500 13px var(--mono);color:var(--ink-2)}
+.tabs{display:flex;gap:4px;background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:3px}
+.tabs button{border:0;background:none;font:500 13px var(--sans);color:var(--ink-2);padding:6px 12px;border-radius:6px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--bg);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.hero{padding:44px 0 24px}
+h1{font:600 30px/1.2 var(--sans);letter-spacing:-.02em;margin:10px 0 12px}
+.lede{color:var(--ink-2);margin:0;max-width:62ch}
+h2{font:600 20px/1.3 var(--sans);letter-spacing:-.01em;margin:0 0 10px}
+h3{font:600 15px/1.4 var(--sans);margin:22px 0 8px}
+p{margin:0 0 12px}
+.muted{color:var(--ink-2)} .faint{color:var(--ink-3)}
+.steps{display:flex;gap:0;margin:8px 0 28px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.steps li{list-style:none;flex:1;padding:10px 0;font:500 12px/1.3 var(--mono);color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px}
+.steps li b{display:block;font:500 13px var(--sans);color:var(--ink-3);margin-top:2px}
+.steps li.on{border-color:var(--accent);color:var(--accent)} .steps li.on b{color:var(--ink)}
+.steps li.done b{color:var(--ink-2)}
+.steps{padding:0}
+.panel{padding-bottom:56px}
+.note{border:1px solid var(--line);background:var(--bg-2);border-radius:8px;padding:12px 14px;font-size:13.5px;color:var(--ink-2);margin:0 0 18px}
+.note b{color:var(--ink)}
+.note.demo{border-color:var(--warn);background:var(--warn-soft);color:var(--ink)}
+.list{margin:0 0 16px;padding:0;list-style:none;counter-reset:n}
+.list li{counter-increment:n;position:relative;padding:8px 0 8px 34px;border-top:1px solid var(--line)}
+.list li:last-child{border-bottom:1px solid var(--line)}
+.list li::before{content:counter(n,decimal-leading-zero);position:absolute;left:0;top:9px;font:500 12px var(--mono);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:500 14px var(--sans);padding:10px 18px;border-radius:8px;cursor:pointer;transition:opacity .15s}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:none;color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:20px}
+table.pack{width:100%;border-collapse:collapse;font-size:13.5px;margin:0 0 18px}
+table.pack th{text-align:left;font:500 12px/1.4 var(--mono);color:var(--ink-3);padding:8px 14px 8px 0;vertical-align:top;width:30%;border-top:1px solid var(--line)}
+table.pack td{padding:8px 0;border-top:1px solid var(--line);vertical-align:top}
+table.pack tr:last-child th,table.pack tr:last-child td{border-bottom:1px solid var(--line)}
+.q{border-left:2px solid var(--accent);padding:4px 0 4px 14px;margin:0 0 22px;font-weight:500}
+.claim{border-top:1px solid var(--line);padding:14px 0}
+.claim:last-of-type{border-bottom:1px solid var(--line)}
+.claim .head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between}
+.claim .num{font:500 12px var(--mono);color:var(--ink-3);min-width:22px;padding-top:3px}
+.claim .txt{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:7px;overflow:hidden;flex:none}
+.seg button{border:0;background:var(--bg);font:500 12.5px var(--sans);color:var(--ink-2);padding:6px 11px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line-2)}
+.seg button[aria-pressed="true"].ok{background:var(--ok-soft);color:var(--ok)}
+.seg button[aria-pressed="true"].bad{background:var(--bad-soft);color:var(--bad)}
+.detail{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 0 36px}
+.detail label{font-size:12.5px;color:var(--ink-2);display:flex;flex-direction:column;gap:4px}
+select,input[type=number]{font:14px var(--sans);color:var(--ink);background:var(--bg);border:1px solid var(--line-2);border-radius:6px;padding:7px 9px}
+input[type=number]{width:120px;font-family:var(--mono)}
+select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.signoff{margin-top:22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.score{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 0 22px}
+.score div{padding:14px 0}
+.score div+div{padding-left:16px;border-left:1px solid var(--line)}
+.score .v{font:500 26px/1.1 var(--mono);letter-spacing:-.02em}
+.score .l{font-size:12.5px;color:var(--ink-2);margin-top:4px}
+.fb{border-top:1px solid var(--line);padding:14px 0 14px 0;display:grid;grid-template-columns:96px 1fr;gap:4px 14px}
+.fb:last-child{border-bottom:1px solid var(--line)}
+.tag{font:500 11.5px/1 var(--mono);padding:5px 7px;border-radius:5px;justify-self:start;white-space:nowrap}
+.tag.caught{background:var(--ok-soft);color:var(--ok)}
+.tag.missed{background:var(--bad-soft);color:var(--bad)}
+.tag.partial,.tag.false{background:var(--warn-soft);color:var(--warn)}
+.tag.agreed{background:var(--bg-2);color:var(--ink-3)}
+.fb .claimtxt{font-weight:500}
+.fb .why{color:var(--ink-2);font-size:14px;grid-column:2}
+.fb .extra{grid-column:2;font-size:13px;color:var(--ink-2)}
+.verdict{font:600 26px/1.25 var(--sans);letter-spacing:-.015em;margin:4px 0 10px}
+.verdict.ready{color:var(--ok)} .verdict.calibrate{color:var(--warn)} .verdict.not-yet{color:var(--bad)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:18px 0}
+.two ul{margin:0;padding-left:18px;color:var(--ink-2)}
+.bar{height:6px;background:var(--bg-2);border-radius:3px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+pre.record{background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:12.5px/1.55 var(--mono);white-space:pre-wrap;color:var(--ink-2);margin:0}
+/* operator */
+.funnel{margin:6px 0 26px}
+.fstep{display:grid;grid-template-columns:150px 1fr 70px;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.fstep:last-child{border-bottom:1px solid var(--line)}
+.fstep .name{font-size:14px}
+.fstep .track{height:22px;background:var(--bg-2);border-radius:4px;position:relative}
+.fstep .track i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:4px;opacity:.85}
+.fstep .n{font:500 14px var(--mono);text-align:right}
+.drop{grid-column:2/4;font:12px var(--mono);color:var(--bad);margin-top:-4px}
+table.t{width:100%;border-collapse:collapse;font-size:13.5px;margin:4px 0 24px}
+table.t th{text-align:left;font:500 12px var(--mono);color:var(--ink-3);padding:7px 10px 7px 0;border-bottom:1px solid var(--line-2)}
+table.t td{padding:8px 10px 8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+table.t td.num,table.t th.num{text-align:right;font-family:var(--mono)}
+.pass{color:var(--ok);font:500 13px var(--mono)} .fail{color:var(--bad);font:500 13px var(--mono)}
+footer{border-top:1px solid var(--line);padding:20px 0 40px;font-size:13px;color:var(--ink-3)}
+[hidden]{display:none!important}
+@media (max-width:620px){
   .wrap{padding:0 16px}
-  .statement{padding:40px 0 16px}
-  nav.top{height:auto;padding:14px 0;flex-direction:column;align-items:flex-start;gap:8px}
-  .facts{gap:20px}
-  td.hide,th.hide{display:none}
+  h1{font-size:24px}
+  .steps li b{font-size:12px}
+  .claim .head{flex-wrap:wrap}
+  .claim .seg{margin-left:36px}
+  .detail{margin-left:36px}
+  .two{grid-template-columns:1fr}
+  .fb{grid-template-columns:1fr}
+  .fb .why,.fb .extra{grid-column:1}
+  .fstep{grid-template-columns:96px 1fr 52px}
+  .score .v{font-size:21px}
+  .brand span{display:none}
 }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav class="top">
-    <span class="name">Partnership Intelligence</span>
-    <div class="tabs" role="tablist">
-      <button role="tab" aria-selected="true" data-view="adoption">Benchmark adoption</button>
-      <button role="tab" aria-selected="false" data-view="radar">Post-training radar<span class="soon">next</span></button>
-    </div>
-  </nav>
-</div>
+<header class="top"><div class="wrap">
+  <div class="brand">Expert onboarding <span>· a prototype for Halluminate</span></div>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="expert">Expert view</button>
+    <button role="tab" aria-selected="false" data-tab="operator">Operator view</button>
+  </div>
+</div></header>
 
 <main class="wrap">
-<div class="view" id="v-adoption">
-  <div class="statement">
-    <div class="date" id="asof">Loading…</div>
-    <h1 id="headline">Who is building on finance and knowledge-work agent benchmarks, and who is warming up.</h1>
-    <p class="lede">Every paper in OpenAlex that cites or names one of 16 benchmarks next to Halluminate's work, resolved to the organisations on the author list. "Rising" means an organisation's last 90 days are unusual for <em>that</em> organisation, not just that it publishes a lot.</p>
-    <div class="facts" id="facts"></div>
-    <div class="own" id="own"></div>
+  <section class="hero">
+    <div class="eyebrow">Can a new finance expert go from sign-up to ready-to-work without a person walking them through it?</div>
+    <h1>Expert onboarding, sign-up to first task, no human in the loop.</h1>
+    <p class="lede">About ten minutes: a short orientation, one sample review task, instant feedback against an answer key, and a readiness call with a suggested first task type. The operator view shows where people drop off.</p>
+  </section>
+
+  <div id="expert">
+    <ol class="steps" id="steps">
+      <li data-step="1">01<b>Orientation</b></li>
+      <li data-step="2">02<b>Sample task</b></li>
+      <li data-step="3">03<b>Feedback</b></li>
+      <li data-step="4">04<b>Readiness</b></li>
+    </ol>
+
+    <section class="panel" data-panel="1">
+      <h2>What you'd be doing</h2>
+      <p>Halluminate builds training environments and benchmarks for AI agents doing finance work. Experts write realistic tasks, the kind an analyst does on a live deal, and review how models answer them. The aim is to find exactly where a model's reasoning breaks so it can be trained to do better.</p>
+      <p class="muted">The review is the core skill. A good reviewer:</p>
+      <ol class="list">
+        <li>Checks every figure against the source, not against what looks plausible.</li>
+        <li>Names the kind of error, not just that something is off. "Wrong add-back" is useful to a trainer; "this seems wrong" isn't.</li>
+        <li>Follows an early mistake through to every number it moves, and to the conclusion.</li>
+        <li>Leaves correct work alone. Flagging sound claims costs everyone time.</li>
+      </ol>
+      <p class="muted">Next you'll review one model answer to a diligence question. Mark each claim as sound or wrong, then say whether you'd sign it off. Feedback is instant.</p>
+      <div class="row"><button class="btn" data-go="2">Start the sample task →</button></div>
+    </section>
+
+    <section class="panel" data-panel="2" hidden>
+      <div class="note"><b>Illustrative task.</b> I wrote this from public descriptions of Westworld Finance Diligence Bench. It isn't a Halluminate task, and the company and every number are fictional. It's graded against an answer key I wrote, not by a model.</div>
+      <h2 id="task-title"></h2>
+      <p class="muted" id="task-brief"></p>
+      <h3>Data pack</h3>
+      <table class="pack" id="pack"></table>
+      <h3>Question put to the model</h3>
+      <p class="q" id="task-q"></p>
+      <h3>The model's answer, claim by claim</h3>
+      <p class="faint" style="font-size:13.5px">Mark each claim. If it's wrong, pick the error type, and for figures give the right number if you can work it out.</p>
+      <div id="claims"></div>
+      <div class="signoff">
+        <span id="signoff-q" style="font-weight:500"></span>
+        <div class="seg" id="signoff">
+          <button data-v="yes" class="ok" aria-pressed="false">Yes</button>
+          <button data-v="no" class="bad" aria-pressed="false">No</button>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn" id="submit" disabled>Submit review</button>
+        <span class="faint" id="submit-hint" style="font-size:13px">Answer the sign-off question to submit.</span>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="3" hidden>
+      <h2>Feedback on your review</h2>
+      <p class="muted" id="fb-summary"></p>
+      <div class="score" id="fb-score"></div>
+      <div id="fb-items"></div>
+      <div class="row"><button class="btn" data-go="4">See your readiness summary →</button></div>
+    </section>
+
+    <section class="panel" data-panel="4" hidden>
+      <div class="eyebrow">Readiness</div>
+      <div class="verdict" id="rd-verdict"></div>
+      <p class="muted" id="rd-sub"></p>
+      <div class="two">
+        <div><h3 style="margin-top:0">Strengths</h3><div id="rd-strengths"></div></div>
+        <div><h3 style="margin-top:0">Gaps</h3><div id="rd-gaps"></div></div>
+      </div>
+      <h3>Suggested first task type</h3>
+      <p id="rd-first"></p>
+      <h3>Record sent to the operator queue</h3>
+      <pre class="record" id="rd-record"></pre>
+      <div class="row">
+        <button class="btn ghost" id="copy">Copy record</button>
+        <button class="btn ghost" id="restart">Start again</button>
+        <button class="btn ghost" data-tab-go="operator">Operator view →</button>
+      </div>
+    </section>
   </div>
 
-  <section>
-    <h2>Adoption graph</h2>
-    <p class="sub">Benchmarks sit on the ring, grouped by category. Organisations active in the last 90 days settle between the benchmarks their papers use. Circle size is recent papers; indigo means rising. Hover for detail, drag to rearrange.</p>
-    <div class="controls" id="groupchips"></div>
-    <div class="graph"><svg id="graph" role="img" aria-label="Network of organisations and the benchmarks they use"></svg>
-      <div class="legend"><span><i style="background:var(--indigo)"></i>rising organisation</span><span><i style="background:var(--lavender);opacity:.55"></i>active, at usual rate</span><span><i style="border-radius:2px;background:var(--ink)"></i>benchmark</span></div>
-    </div>
-    <p class="graph-mobile">The graph needs a wider screen. The leads table below has the same data.</p>
-  </section>
+  <div id="operator" hidden>
+    <section class="panel">
+      <div class="note demo"><b>Demo data.</b> The funnel and miss rates below are made up to show what the operator view does. None of it is a real Halluminate number. The grader checks at the bottom are real: they run in your browser now.</div>
 
-  <section>
-    <h2>Warm leads</h2>
-    <p class="sub">Sorted by how far each organisation's last 90 days sit above its own trailing 12-month rate, not by raw volume. The bar shows papers in the last 90 days; the tick shows what its usual rate would predict.</p>
-    <div class="controls">
-      <select id="ftype" aria-label="Organisation type"><option value="">All types</option></select>
-      <button class="chip" id="frise" aria-pressed="true">Rising only</button>
-      <span class="mono" style="color:var(--ink-3);font-size:12px" id="lcount"></span>
-    </div>
-    <div class="scroll"><table id="leads"></table></div>
-    <button class="chip more" id="more">Show more</button>
-  </section>
+      <h2>Funnel, last 30 days</h2>
+      <p class="muted">Where experts drop out between being sourced and being ready to work. "Ready" counts both first-attempt passes and those who passed after calibration. The biggest drop is the step to fix first.</p>
+      <div class="funnel" id="funnel"></div>
 
-  <section>
-    <h2>Benchmarks tracked</h2>
-    <p class="sub">The adjacent benchmarks, grouped the way Halluminate's research page groups its own work.</p>
-    <div class="scroll"><table id="bench"></table></div>
-  </section>
+      <h2>Outcomes of submitted reviews</h2>
+      <table class="t" id="outcomes"></table>
 
-  <section class="method">
-    <h2>Method and limits</h2>
-    <h3>Source</h3>
-    <p>OpenAlex, queried daily by a GitHub Action. A paper counts toward a benchmark if it cites the benchmark's paper or names the benchmark in its title or abstract. For names that collide with other fields (τ-bench, AppWorld, GAIA, which is also a star survey), the abstract must also mention agents or language models.</p>
-    <h3>Baseline</h3>
-    <p>For each organisation: papers in the last 90 days against the 12 months before that. Rising means at least two recent papers, at least 1.5 times its usual rate, and a Poisson-style score <code>(recent − expected) ÷ √(expected + 1)</code> of 1 or more. A first-time organisation with two papers counts as rising, flagged "new".</p>
-    <h3>Organisation types</h3>
-    <p>From OpenAlex institution types, with a manual override file for frontier labs and large enterprises (<code>overrides.json</code>). Subsidiaries are merged (Microsoft Research Asia into Microsoft, for example).</p>
-    <h3>Limits</h3>
-    <ul>
-      <li>OpenAlex doesn't yet index Halluminate's own benchmarks, so the graph is built on their neighbours.</li>
-      <li>About a third of recent arXiv papers have no resolved institutions in OpenAlex yet; they count toward benchmark totals but not toward any organisation.</li>
-      <li>Papers are a lagging and academic-leaning signal. Labs that build on benchmarks privately don't show up.</li>
-      <li>Organisations only. No individual is named; author lists are on the linked papers.</li>
-    </ul>
-    <p style="margin-top:22px">Source and pipeline on <a href="https://github.com/JakeM-R/halluminate-partnership-intel">GitHub</a>.</p>
-  </section>
-</div>
+      <h2>What reviewers miss most</h2>
+      <p class="muted">Per claim in the sample task. A high miss rate on one item means the orientation should teach it, or the item is unclear.</p>
+      <table class="t" id="misses"></table>
 
-<div class="view coming" id="v-radar" hidden>
-  <div class="date">Next view</div>
-  <h1 style="font-size:32px">Post-training radar</h1>
-  <p>Which of these labs are entering a post-training cycle, so the leads above come with timing. It will compare each lab's Hugging Face model releases and arXiv agent, RL and post-training papers over the last 30 days against its own 12-month cadence, and flag labs running at twice their norm.</p>
-  <p>Same page, same daily pipeline. It's being built now.</p>
-</div>
+      <h2>Grader checks</h2>
+      <p class="muted">Three deliberately strong, average and weak reviews, run through the same grader you just used. Feedback has to be right on all three before this ships, so CI runs these on every push.</p>
+      <table class="t" id="checks"></table>
+    </section>
+  </div>
 </main>
 
 <footer><div class="wrap">
-  <span>Built by Jake Makking-Robinson as part of an application to Halluminate.</span>
-  <span>Data: OpenAlex · Not affiliated with Halluminate.</span>
+  Built by Jake Makking-Robinson as a prototype for Halluminate. The sample task, rubric and answer key are mine; the operator figures are demo data. Source: <a href="https://github.com/jakem-r/halluminate-partnership-intel">GitHub</a>.
 </div></footer>
-<div class="tip" id="tip"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
-<script>
-const $ = s => document.querySelector(s);
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const fmtDate = s => new Date(s).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"});
-const GROUP_COLOR = {"Finance": "var(--g-fin)", "Knowledge work": "var(--g-know)", "Web & computer use": "var(--g-web)"};
-let D, BN = {}, shown = 40, groups = new Set(Object.keys(GROUP_COLOR));
-
-fetch("data.json", {cache: "no-cache"}).then(r => r.json()).then(d => { D = d; d.benchmarks.forEach(b => BN[b.key] = b); render(); })
-  .catch(e => { $("#asof").textContent = "Couldn't load data.json"; console.error(e); });
-
-function render() {
-  const s = D.stats;
-  $("#asof").textContent = `Updated ${fmtDate(D.generatedAt)} · last 90 days since ${fmtDate(D.window.recentFrom)}`;
-  $("#headline").innerHTML = `<b>${s.orgsRecent}</b> organisations published on finance or knowledge-work agent benchmarks in the last 90 days, and <b>${s.rising}</b> are above their usual rate.`;
-  $("#facts").innerHTML = [
-    [s.papers.toLocaleString(), `papers since ${fmtDate(D.window.start)}`],
-    [s.papersRecent, "in the last 90 days"],
-    [s.orgs, "organisations in total"],
-    [Math.round(100 * s.papersWithInstitution / s.papers) + "%", "of papers resolved to an organisation"],
-  ].map(([b, t]) => `<div><b>${b}</b><span>${t}</span></div>`).join("");
-  $("#own").innerHTML = `<p>Halluminate's own benchmarks aren't indexed in OpenAlex yet, so this view is built on their neighbours. It picks them up automatically once they are.</p><ul>${D.halluminate.map(h => `<li><span>${new Date(h.date).toLocaleDateString("en-GB", {month: "short", year: "numeric"})}</span><a href="${h.url}">${esc(h.name)}</a></li>`).join("")}</ul>`;
-
-  $("#groupchips").innerHTML = Object.entries(GROUP_COLOR).map(([g, c]) => `<button class="chip" aria-pressed="true" data-g="${esc(g)}"><i style="background:${c}"></i>${esc(g)}</button>`).join("");
-  document.querySelectorAll("#groupchips .chip").forEach(b => b.onclick = () => {
-    const g = b.dataset.g;
-    groups.has(g) ? groups.delete(g) : groups.add(g);
-    if (!groups.size) groups.add(g);
-    document.querySelectorAll("#groupchips .chip").forEach(x => x.setAttribute("aria-pressed", groups.has(x.dataset.g)));
-    drawGraph();
-  });
-
-  const types = [...new Set(D.leads.map(l => l.type))].sort();
-  $("#ftype").innerHTML += types.map(t => `<option>${esc(t)}</option>`).join("");
-  $("#ftype").onchange = () => { shown = 40; renderLeads(); };
-  $("#frise").onclick = () => { $("#frise").setAttribute("aria-pressed", $("#frise").getAttribute("aria-pressed") !== "true"); shown = 40; renderLeads(); };
-  $("#more").onclick = () => { shown += 40; renderLeads(); };
-
-  renderLeads(); renderBench(); drawGraph();
-}
-
-function renderLeads() {
-  const t = $("#ftype").value, rise = $("#frise").getAttribute("aria-pressed") === "true";
-  const list = D.leads.filter(l => l.recent > 0 && (!t || l.type === t) && (!rise || l.rising));
-  const max = Math.max(...list.map(l => Math.max(l.recent, l.baseMonthly * 3)), 1);
-  $("#lcount").textContent = `${list.length} organisations`;
-  $("#leads").innerHTML = `<thead><tr><th>Organisation</th><th>Last 90 days vs usual</th><th>Benchmarks (last 90 days)</th><th class="hide">Latest paper</th></tr></thead><tbody>` +
-    list.slice(0, shown).map(l => {
-      const exp = l.baseMonthly * 3;
-      return `<tr>
-        <td class="org">${l.ror ? `<a href="${l.ror}" style="color:inherit">${esc(l.name)}</a>` : esc(l.name)}${l.rising ? `<span class="rise">${l.new ? "new" : "rising"}</span>` : ""}<div class="type" style="font-weight:400">${esc(l.type)}${l.country ? " · " + esc(l.country) : ""}</div></td>
-        <td class="vs">${l.recent} <small>vs ${exp.toFixed(1)} usual</small><span class="spark"><i style="width:${100 * l.recent / max}%"></i><u style="left:${100 * exp / max}%"></u></span></td>
-        <td class="benches">${Object.entries(l.benchRecent).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<span class="b" style="border-color:${GROUP_COLOR[BN[k].group]}">${esc(BN[k].name)}${n > 1 ? ` ×${n}` : ""}</span>`).join("")}</td>
-        <td class="paper hide"><a href="${esc(l.latest.url)}">${esc(l.latest.title)}</a><span>${fmtDate(l.latest.date)}${l.latest.venue ? " · " + esc(l.latest.venue) : ""}</span></td>
-      </tr>`;
-    }).join("") + "</tbody>";
-  $("#more").hidden = list.length <= shown;
-}
-
-function renderBench() {
-  const order = Object.keys(GROUP_COLOR);
-  const rows = D.benchmarks.slice().sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || b.recent - a.recent);
-  $("#bench").innerHTML = `<thead><tr><th>Benchmark</th><th>Group</th><th class="n">Papers, 15 months</th><th class="n">Last 90 days</th><th class="n">Organisations, last 90 days</th></tr></thead><tbody>` +
-    rows.map(b => `<tr><td class="org">${esc(b.name)}</td><td class="type"><span class="b" style="border-color:${GROUP_COLOR[b.group]}">${esc(b.group)}</span></td><td class="n">${b.papers}</td><td class="n">${b.recent}</td><td class="n">${b.orgsRecent}</td></tr>`).join("") + "</tbody>";
-}
-
-function drawGraph() {
-  if (!window.d3) return;
-  const svg = d3.select("#graph"); svg.selectAll("*").remove();
-  const el = $("#graph"), W = el.clientWidth || 1000, H = 620;
-  if (W < 10) return;
-  const benches = D.benchmarks.filter(b => groups.has(b.group) && b.recent > 0);
-  const bset = new Set(benches.map(b => b.key));
-  const orgs = D.leads.filter(l => l.recent > 0 && Object.keys(l.benchRecent).some(k => bset.has(k)))
-    .sort((a, b) => (b.rising - a.rising) || (b.recent - a.recent)).slice(0, 80);
-  const nodes = [...benches.map(b => ({id: "b:" + b.key, kind: "b", b})), ...orgs.map(o => ({id: "o:" + o.name, kind: "o", o}))];
-  const links = orgs.flatMap(o => Object.entries(o.benchRecent).filter(([k]) => bset.has(k)).map(([k, n]) => ({source: "o:" + o.name, target: "b:" + k, n})));
-  const r = n => n.kind === "b" ? 7 + Math.sqrt(n.b.recent) * 1.6 : 3.5 + Math.sqrt(n.o.recent) * 3;
-  // Benchmarks sit on a fixed ring, grouped by category; organisations settle between the ones they use.
-  const order = Object.keys(GROUP_COLOR);
-  const ring = nodes.filter(n => n.kind === "b").sort((a, b) => order.indexOf(a.b.group) - order.indexOf(b.b.group) || b.b.recent - a.b.recent);
-  const RX = W / 2 - 140, RY = H / 2 - 50;
-  ring.forEach((n, i) => { const a = -Math.PI / 2 + 2 * Math.PI * i / ring.length; n.fx = W / 2 + RX * Math.cos(a); n.fy = H / 2 + RY * Math.sin(a); n.angle = a; });
-  const sim = d3.forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id(d => d.id).distance(40).strength(d => .08 + .04 * d.n))
-    .force("charge", d3.forceManyBody().strength(-40))
-    .force("center", d3.forceCenter(W / 2, H / 2))
-    .force("collide", d3.forceCollide(d => r(d) + (d.kind === "b" ? 22 : 4)))
-    .force("x", d3.forceX(W / 2).strength(.03)).force("y", d3.forceY(H / 2).strength(.03));
-  const link = svg.append("g").selectAll("line").data(links).join("line")
-    .attr("stroke", "var(--line-2)").attr("stroke-width", d => .6 + d.n * .5);
-  const node = svg.append("g").selectAll("g").data(nodes).join("g").style("cursor", "grab")
-    .call(d3.drag().on("start", (e, d) => { if (!e.active) sim.alphaTarget(.25).restart(); d.fx = d.x; d.fy = d.y; })
-      .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
-      .on("end", (e, d) => { if (!e.active) sim.alphaTarget(0); if (d.kind === "o") { d.fx = null; d.fy = null; } }));
-  node.filter(d => d.kind === "b").append("rect")
-    .attr("x", d => -r(d)).attr("y", d => -r(d)).attr("width", d => 2 * r(d)).attr("height", d => 2 * r(d)).attr("rx", 3)
-    .attr("fill", d => GROUP_COLOR[d.b.group]);
-  node.filter(d => d.kind === "b").append("text").text(d => d.b.name)
-    .attr("x", d => Math.cos(d.angle) * (r(d) + 8)).attr("y", d => Math.sin(d.angle) * (r(d) + 10) + 4)
-    .attr("text-anchor", d => Math.abs(Math.cos(d.angle)) < .3 ? "middle" : Math.cos(d.angle) > 0 ? "start" : "end")
-    .style("font", "500 12px var(--mono)").style("fill", "var(--ink)").style("paint-order", "stroke").style("stroke", "var(--bg)").style("stroke-width", 4);
-  node.filter(d => d.kind === "o").append("circle").attr("r", r)
-    .attr("fill", d => d.o.rising ? "var(--indigo)" : "var(--lavender)").attr("fill-opacity", d => d.o.rising ? 1 : .5)
-    .attr("stroke", "var(--bg)").attr("stroke-width", 1.2);
-  const labelled = new Set(orgs.filter(o => o.rising).sort((a, b) => b.z - a.z).slice(0, 6).map(o => o.name));
-  node.filter(d => d.kind === "o" && labelled.has(d.o.name)).append("text").text(d => d.o.name)
-    .attr("x", d => r(d) + 4).attr("y", 4).style("font", "11px var(--sans)").style("fill", "var(--ink-2)")
-    .style("paint-order", "stroke").style("stroke", "var(--bg)").style("stroke-width", 3).style("pointer-events", "none");
-  const tip = $("#tip");
-  node.on("mousemove", (e, d) => {
-    const nb = new Set(links.filter(l => l.source.id === d.id || l.target.id === d.id).flatMap(l => [l.source.id, l.target.id]));
-    node.style("opacity", n => nb.has(n.id) || n.id === d.id ? 1 : .15);
-    link.style("opacity", l => l.source.id === d.id || l.target.id === d.id ? 1 : .08);
-    tip.innerHTML = d.kind === "b"
-      ? `<b>${esc(d.b.name)}</b> · ${esc(d.b.group)}<br>${d.b.recent} papers and ${d.b.orgsRecent} organisations in the last 90 days`
-      : `<b>${esc(d.o.name)}</b> · ${esc(d.o.type)}<br>${d.o.recent} papers in 90 days vs ${(d.o.baseMonthly * 3).toFixed(1)} usual${d.o.rising ? " · rising" : ""}<br>Latest: ${esc(d.o.latest.title)}`;
-    tip.style.left = Math.min(e.clientX + 14, innerWidth - 320) + "px"; tip.style.top = e.clientY + 14 + "px"; tip.style.opacity = 1;
-  }).on("mouseleave", () => { node.style("opacity", 1); link.style("opacity", 1); tip.style.opacity = 0; });
-  sim.on("tick", () => {
-    nodes.forEach(n => { if (n.kind === "o") { n.x = Math.max(20, Math.min(W - 20, n.x)); n.y = Math.max(30, Math.min(H - 40, n.y)); } });
-    link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
-    node.attr("transform", d => `translate(${d.x},${d.y})`);
-  });
-}
-
-document.querySelectorAll("nav.top button").forEach(b => b.onclick = () => {
-  document.querySelectorAll("nav.top button").forEach(x => x.setAttribute("aria-selected", x === b));
-  document.querySelectorAll(".view").forEach(v => v.hidden = v.id !== "v-" + b.dataset.view);
-  history.replaceState(null, "", "#" + b.dataset.view);
-  if (b.dataset.view === "adoption" && D) drawGraph();
-});
-const fromHash = () => document.querySelector(`nav.top button[data-view="${location.hash.slice(1)}"]`)?.click();
-addEventListener("hashchange", fromHash); fromHash();
-let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => D && drawGraph(), 200); });
-</script>
+<script src="task.js"></script>
+<script src="grader.js"></script>
+<script src="test-answers.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
