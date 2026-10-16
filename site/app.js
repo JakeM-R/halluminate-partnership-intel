@@ -10,7 +10,7 @@
 
   var state = {
     source: "demo", fileName: "", rows: [], headers: [], map: {},
-    runDate: todayUTC(), settings: Object.assign({}, AR.DEFAULT_SETTINGS),
+    tab: "demo", runDate: todayUTC(), settings: Object.assign({}, AR.DEFAULT_SETTINGS),
     result: null, drafts: {}, dirty: {}, open: {}, draftMode: "template", runId: 0
   };
 
@@ -34,10 +34,73 @@
     runAnalysis();
   }
 
+  // ---------- Tabs ----------
+
+  function setTab(tab) {
+    state.tab = tab;
+    $("tabDemo").setAttribute("aria-selected", tab === "demo");
+    $("tabUpload").setAttribute("aria-selected", tab === "upload");
+    $("uploadPanel").hidden = tab !== "upload";
+    if (tab === "demo") {
+      $("results").hidden = false;
+      if (!isDemo()) loadDemo();
+    } else {
+      renderUploadHead();
+      // Results show only once a file of the user's own has been run.
+      $("results").hidden = isDemo();
+      $("guide").open = isDemo();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  function renderUploadHead() {
+    if (!isDemo()) {
+      $("uploadHead").innerHTML = '<div class="loaded"><span>Showing <b>' + esc(state.fileName) + "</b> · " + state.rows.length + " rows</span>" +
+        '<span class="spacer"></span><label for="file" class="btn" tabindex="0" data-pick>Choose another file</label></div>';
+      return;
+    }
+    $("uploadHead").innerHTML = '<div class="drop" id="drop"><h3>Upload your invoice export</h3>' +
+      "<p>CSV from HubSpot or QuickBooks. It's read in this browser and never uploaded anywhere.</p>" +
+      '<div class="row"><label for="file" class="btn primary" tabindex="0" data-pick>Choose CSV</label>' +
+      '<button class="btn" type="button" id="tplBtn">Download template</button></div></div>';
+    var drop = $("drop");
+    ["dragenter", "dragover"].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add("over"); }); });
+    ["dragleave", "drop"].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove("over"); }); });
+    drop.addEventListener("drop", function (e) { var f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+    $("tplBtn").addEventListener("click", downloadTemplate);
+  }
+
+  function renderGuide() {
+    var need = function (f) {
+      return f.required ? '<span class="need req">Required</span>' : f.recommended ? '<span class="need rec">Recommended</span>' : '<span class="need opt">Optional</span>';
+    };
+    var title = function (s) {
+      return s.split(" ").map(function (w) { return /^(ap|cc|id)$/.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1); }).join(" ");
+    };
+    $("guideTable").innerHTML = "<table><thead><tr><th>Column</th><th></th><th>What it's used for</th><th>Headers recognised</th></tr></thead><tbody>" +
+      AR.FIELDS.map(function (f) {
+        return '<tr><td class="f">' + esc(f.label) + "</td><td>" + need(f) + '</td><td class="u">' + esc(f.use) + '</td><td class="h">' +
+          f.syn.slice(0, 4).map(function (s) { return "<code>" + esc(title(s)) + "</code>"; }).join("") + "</td></tr>";
+      }).join("") + "</tbody></table>";
+  }
+
+  function downloadTemplate() {
+    var lines = [
+      "Invoice number,Company name,Contact email,AP email,Amount,Amount paid,Invoice date,Due date,Status,Terms,Paid date",
+      "DEMO-001,Customer A,billing@customer-a.example,,1000.00,0.00,2026-09-01,2026-10-01,Open,Net 30,",
+      "DEMO-002,Customer A,billing@customer-a.example,,500.00,500.00,2026-07-01,2026-07-31,Paid,Net 30,2026-08-05"
+    ];
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" }));
+    a.download = "ar-chaser-template.csv"; a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+
   function loadFile(file) {
     var reader = new FileReader();
     reader.onload = function () {
       var p = AR.parseCSV(reader.result);
+      if (state.tab !== "upload") setTab("upload");
       if (!p.headers.length || !p.rows.length) { showMapperError("That file has no rows."); return; }
       state.pending = { headers: p.headers, rows: p.rows, name: file.name };
       renderMapper(p.headers, AR.autoMap(p.headers), file.name, p.rows.length);
@@ -57,7 +120,7 @@
     };
     $("mapper").innerHTML =
       '<div class="mapper"><h3>Match columns: ' + esc(name) + "</h3>" +
-      "<p>" + n + " rows. Guessed from the headers; check anything marked required. Amount paid or open balance nets partial payments. Paid date powers the late-history modifier.</p>" +
+      "<p>" + n + " rows. Matched from your headers; check anything marked required. The guide below says what each column does.</p>" +
       '<div class="mapgrid">' + AR.FIELDS.map(function (f) {
         return "<label>" + esc(f.label) + (f.required ? ' <span class="req">required</span>' : "") +
           '<select data-k="' + f.key + '">' + opts(map[f.key]) + "</select></label>";
@@ -73,6 +136,10 @@
       state.headers = state.pending.headers; state.rows = state.pending.rows; state.map = m;
       $("mapper").innerHTML = "";
       runAnalysis();
+      renderUploadHead();
+      $("results").hidden = false;
+      $("guide").open = false;
+      $("results").scrollIntoView({ behavior: "smooth", block: "start" });
     };
     $("cancelMap").onclick = function () { $("mapper").innerHTML = ""; };
     $("mapper").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -317,8 +384,11 @@
     runAnalysis();
   });
   $("file").addEventListener("change", function (e) { if (e.target.files[0]) loadFile(e.target.files[0]); e.target.value = ""; });
-  $("uploadBtn").addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("file").click(); } });
-  $("demoBtn").addEventListener("click", loadDemo);
+  $("uploadPanel").addEventListener("keydown", function (e) {
+    if (e.target.hasAttribute && e.target.hasAttribute("data-pick") && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); $("file").click(); }
+  });
+  $("tabDemo").addEventListener("click", function () { setTab("demo"); });
+  $("tabUpload").addEventListener("click", function () { setTab("upload"); });
 
   ["sName", "sRole", "fName", "fRole"].forEach(function (id, i) {
     $(id).value = state.settings[["senderName", "senderRole", "founderName", "founderRole"][i]];
@@ -361,6 +431,7 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   });
 
+  renderGuide();
   loadDemo();
   loadScript();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { document.querySelectorAll("#cards textarea").forEach(fit); });

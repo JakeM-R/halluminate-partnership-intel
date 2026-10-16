@@ -48,18 +48,18 @@
 
   // Synonyms cover HubSpot invoice exports and QuickBooks A/R detail / invoice list exports.
   var FIELDS = [
-    { key: "invoice", label: "Invoice #", required: true, syn: ["invoice number", "invoice #", "invoice no", "invoice id", "num", "number", "invoice", "no."] },
-    { key: "customer", label: "Customer", required: true, syn: ["customer", "company name", "company", "customer name", "associated company", "client", "name", "account"] },
-    { key: "email", label: "Contact email", syn: ["contact email", "billing email", "email", "customer email", "bill to email", "e-mail"] },
-    { key: "ccEmail", label: "AP / finance email (cc)", syn: ["ap email", "accounts payable email", "finance email", "cc email", "cc"] },
-    { key: "amount", label: "Amount", required: true, syn: ["amount", "invoice amount", "total", "amount billed", "invoice total", "original amount"] },
-    { key: "paid", label: "Amount paid", syn: ["amount paid", "paid", "payments", "amount received", "paid amount"] },
-    { key: "balance", label: "Open balance", syn: ["open balance", "balance due", "balance", "amount due", "outstanding"] },
-    { key: "issueDate", label: "Issue date", syn: ["issue date", "invoice date", "date", "created date", "txn date"] },
-    { key: "dueDate", label: "Due date", required: true, syn: ["due date", "due", "payment due date", "due on"] },
-    { key: "status", label: "Status", syn: ["status", "invoice status", "payment status", "state"] },
-    { key: "terms", label: "Terms", syn: ["terms", "payment terms", "net terms"] },
-    { key: "paidDate", label: "Paid date (for late history)", syn: ["paid date", "date paid", "payment date", "paid on", "last payment date"] }
+    { key: "invoice", label: "Invoice #", required: true, use: "Listed in each email. Duplicates are counted once and flagged.", syn: ["invoice number", "invoice #", "invoice no", "invoice id", "num", "number", "invoice", "no."] },
+    { key: "customer", label: "Customer", required: true, use: "Groups invoices into one email per customer.", syn: ["customer", "company name", "company", "customer name", "associated company", "client", "name", "account"] },
+    { key: "email", label: "Contact email", use: "Where the draft goes. Without it the customer is flagged and gets no draft.", recommended: true, syn: ["contact email", "billing email", "email", "customer email", "bill to email", "e-mail"] },
+    { key: "ccEmail", label: "AP / finance email (cc)", use: "Copied on tier 3 (31 to 60 days) emails.", syn: ["ap email", "accounts payable email", "finance email", "cc email", "cc"] },
+    { key: "amount", label: "Amount", required: true, use: "Invoice total. Zero or negative rows (credit notes) are excluded.", syn: ["amount", "invoice amount", "total", "amount billed", "invoice total", "original amount"] },
+    { key: "paid", label: "Amount paid", use: "Nets partial payments so only the remainder is chased.", recommended: true, syn: ["amount paid", "paid", "payments", "amount received", "paid amount"] },
+    { key: "balance", label: "Open balance", use: "Alternative to Amount paid, as in QuickBooks exports.", syn: ["open balance", "balance due", "balance", "amount due", "outstanding"] },
+    { key: "issueDate", label: "Issue date", use: "Reference only.", syn: ["issue date", "invoice date", "date", "created date", "txn date"] },
+    { key: "dueDate", label: "Due date", required: true, use: "Sets days overdue, bucket and tier. Rows without one are excluded.", syn: ["due date", "due", "payment due date", "due on"] },
+    { key: "status", label: "Status", use: "Paid or void rows are excluded. Disputed gets a billing reply instead of a chaser.", recommended: true, syn: ["status", "invoice status", "payment status", "state"] },
+    { key: "terms", label: "Terms", use: "A fee can be mentioned only if the terms state one.", syn: ["terms", "payment terms", "net terms"] },
+    { key: "paidDate", label: "Paid date (for late history)", use: "Late-payment history on settled invoices, which softens or firms the tone.", syn: ["paid date", "date paid", "payment date", "paid on", "last payment date"] }
   ];
 
   function norm(s) { return String(s || "").toLowerCase().replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim(); }

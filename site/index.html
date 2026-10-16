@@ -93,7 +93,7 @@ h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
 .mapper p{margin:0 0 16px;font-size:13px;color:var(--ink-2)}
 .mapgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px 16px}
 .mapgrid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-2);font-weight:500}
-.mapgrid label .req{color:var(--orange-ink)}
+.mapgrid label .req{color:var(--navy);font-weight:600}
 .mapgrid select{height:32px;border:1px solid var(--line-2);border-radius:8px;background:var(--bg);padding:0 6px;font-size:13px}
 .mapper .actions{display:flex;gap:8px;align-items:center;margin-top:16px;flex-wrap:wrap}
 .err{color:#9B2C1F;font-size:13px}
@@ -186,6 +186,40 @@ details.rubric[open] summary::after{content:"–"}
 footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:12px;color:var(--ink-3)}
 footer p{margin:4px 0;max-width:720px}
 
+/* Tabs */
+.tabs{display:inline-flex;padding:3px;background:var(--surface);border:1px solid var(--line);border-radius:10px;gap:2px}
+.tabs button{height:28px;padding:0 12px;border:0;border-radius:7px;background:none;font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{background:var(--bg);color:var(--ink);box-shadow:0 1px 2px rgba(29,36,48,.12)}
+.tabs button:focus-visible{outline:2px solid var(--indigo);outline-offset:1px}
+
+/* Upload tab */
+.upload{margin-bottom:56px}
+.drop{border:1.5px dashed var(--line-2);border-radius:var(--r);padding:28px 20px;text-align:center;background:var(--surface);transition:border-color .15s,background .15s}
+.drop.over{border-color:var(--orange);background:var(--orange-soft)}
+.drop h3{margin:0 0 4px;font-size:17px;color:var(--navy)}
+.drop p{margin:0 0 16px;font-size:13px;color:var(--ink-2)}
+.drop .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.loaded{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;font-size:13px;color:var(--ink-2)}
+.loaded b{color:var(--ink)}
+.loaded .spacer{flex:1}
+details.guide{margin-top:16px;border:1px solid var(--line);border-radius:var(--r)}
+details.guide>summary{cursor:pointer;padding:14px 16px;font-size:14px;font-weight:600;color:var(--navy);list-style:none}
+details.guide>summary::-webkit-details-marker{display:none}
+details.guide>summary::after{content:"+";float:right;color:var(--ink-3);font-weight:400}
+details.guide[open]>summary::after{content:"–"}
+details.guide>.sub{padding:0 16px;margin:0 0 12px}
+details.guide>.sub.small{font-size:12px;color:var(--ink-3);margin:12px 0 16px}
+.gtable{padding:0 16px;overflow-x:auto}
+.gtable table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+.gtable th{text-align:left;font-weight:500;color:var(--ink-3);padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.gtable td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-2)}
+.gtable th:first-child,.gtable td:first-child{padding-left:0}
+.gtable td.f{color:var(--ink);font-weight:500;white-space:nowrap}
+.gtable code{font:11px var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 4px;margin:0 4px 4px 0;display:inline-block;color:var(--ink)}
+.need{display:inline-flex;height:20px;align-items:center;padding:0 7px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap}
+.need.req{background:var(--navy);color:#fff}
+.need.rec{background:var(--navy-soft);color:var(--navy)}
+.need.opt{color:var(--ink-3)}
 .sm{display:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
@@ -204,6 +238,12 @@ footer p{margin:4px 0;max-width:720px}
   .runbar .wrap{gap:6px}
   .runbar .field{gap:6px}
   .runbar .btn{padding:0 10px}
+  .tabs button{padding:0 10px}
+  .gtable table{min-width:0}
+  .gtable thead{display:none}
+  .gtable tr{display:grid;grid-template-columns:1fr auto;gap:4px 8px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .gtable td{padding:0;border:none}
+  .gtable td.u,.gtable td.h{grid-column:1 / -1}
   .signoff summary.btn{padding:0 6px}
   main{padding-top:24px}
   section{margin-top:40px}
@@ -243,9 +283,10 @@ footer p{margin:4px 0;max-width:720px}
     <label class="field"><span class="lg">Run date</span><input type="date" id="runDate" aria-label="Run date"></label>
     <span class="field hide-sm" id="nextRun"></span>
     <span class="spacer"></span>
-    <input type="file" id="file" accept=".csv,text/csv" class="sr">
-    <label for="file" class="btn primary" tabindex="0" id="uploadBtn"><span class="lg">Upload invoice CSV</span><span class="sm">Upload CSV</span></label>
-    <button class="btn" id="demoBtn" type="button"><span class="lg">Use demo data</span><span class="sm">Demo</span></button>
+    <div class="tabs" role="tablist" aria-label="Data source">
+      <button role="tab" id="tabDemo" type="button" aria-selected="true">Demo<span class="lg"> data</span></button>
+      <button role="tab" id="tabUpload" type="button" aria-selected="false">Upload CSV</button>
+    </div>
     <details class="signoff" id="settings">
       <summary class="btn ghost" aria-label="Sign-off settings">Sign-off</summary>
       <div class="pop">
@@ -260,7 +301,19 @@ footer p{margin:4px 0;max-width:720px}
 </div>
 
 <main class="wrap">
-  <div id="mapper"></div>
+  <input type="file" id="file" accept=".csv,text/csv" class="sr" tabindex="-1">
+  <section id="uploadPanel" class="upload" hidden>
+    <div id="uploadHead"></div>
+    <div id="mapper"></div>
+    <details class="guide" id="guide" open>
+      <summary>Columns the export needs</summary>
+      <p class="sub">Export invoices from HubSpot or QuickBooks as CSV, one row per invoice, including paid ones if you want the late-history modifier. Header names don't need to match exactly: common names are recognised and you can match anything else by hand.</p>
+      <div class="gtable" id="guideTable"></div>
+      <p class="sub small">Slash dates are read as US (MM/DD/YYYY). ISO dates (2026-10-16) and "Oct 16, 2026" also work.</p>
+    </details>
+  </section>
+
+  <div id="results">
 
   <section id="top">
     <div class="headline">
@@ -298,6 +351,8 @@ footer p{margin:4px 0;max-width:720px}
       <button class="btn" type="button" id="copySlack">Copy</button>
     </div>
   </section>
+
+  </div>
 
   <section id="script">
     <h2>Make it run itself</h2>
