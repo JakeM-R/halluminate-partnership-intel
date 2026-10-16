@@ -182,7 +182,7 @@
   ];
 
   var DEFAULT_SETTINGS = {
-    senderName: "Alex Rivera",
+    senderName: "Your name",
     senderRole: "Finance Operations, SnapMagic",
     founderName: "Founder name",
     founderRole: "Co-founder & CEO, SnapMagic",

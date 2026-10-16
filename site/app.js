@@ -16,8 +16,13 @@
 
   function todayUTC() { var d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-  function money(n) { return AR.fmtMoney(Math.round(n)); }
   function isDemo() { return state.source === "demo"; }
+  // Demo mode shows every dollar figure as $xx; an uploaded file shows real amounts.
+  var MONEY_RE = /-?\$\s?[0-9][0-9,]*(?:\.[0-9]+)?k?/g;
+  function mask(text) { return isDemo() ? String(text).replace(MONEY_RE, "$$xx") : String(text); }
+  function money(n) { return isDemo() ? "$xx" : AR.fmtMoney(Math.round(n)); }
+  function kMoney(n) { return isDemo() ? "$xx" : AR.fmtK(n); }
+  function maskDraft(d) { if (isDemo()) { d.subject = mask(d.subject); d.body = mask(d.body); } return d; }
 
   // ---------- Data loading ----------
 
@@ -78,7 +83,7 @@
   function runAnalysis() {
     state.result = AR.analyze(state.rows, state.map, state.runDate, state.settings);
     state.drafts = {}; state.dirty = {}; state.draftMode = "template";
-    state.result.customers.forEach(function (c, i) { c.id = i; state.drafts[i] = AR.templateDraft(c, state.runDate, state.settings); });
+    state.result.customers.forEach(function (c, i) { c.id = i; state.drafts[i] = maskDraft(AR.templateDraft(c, state.runDate, state.settings)); });
     render();
     requestModelDrafts();
   }
@@ -107,7 +112,7 @@
         if (!c || state.dirty[c.id]) return;
         var chosen = AR.chooseDraft(d, c, state.runDate, state.settings);
         if (chosen.source === "claude") used++; else rejected++;
-        state.drafts[c.id] = chosen;
+        state.drafts[c.id] = maskDraft(chosen);
       });
       state.draftMode = "claude";
       renderCards();
@@ -139,8 +144,8 @@
 
     var n = res.toChase;
     $("headline").innerHTML = n + " customer" + (n === 1 ? "" : "s") + " to chase" +
-      '<span class="sep">·</span><small>' + AR.fmtK(res.totalAR) + " outstanding</small>" +
-      '<span class="sep">·</span><small>' + AR.fmtK(res.over30) + " over 30 days</small>";
+      '<span class="sep">·</span><small>' + kMoney(res.totalAR) + " outstanding</small>" +
+      '<span class="sep">·</span><small>' + kMoney(res.over30) + " over 30 days</small>";
     $("dates").innerHTML = "Run <b>" + esc(AR.fmtDate(res.runDate)) + "</b><br>Next run <b>" + esc(AR.fmtDate(res.nextRun)) + "</b>";
 
     var needs = res.customers.filter(function (c) { return c.needsYou; });
@@ -161,7 +166,7 @@
 
   function slackText() {
     // ar.js escapes for Slack's API; the copy button wants plain text.
-    return AR.slackDigest(state.result).replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+    return mask(AR.slackDigest(state.result).replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"));
   }
 
   function renderAging() {
@@ -214,9 +219,9 @@
     $("cards").innerHTML = shown.map(function (c) {
       var d = state.drafts[c.id];
       var facts = money(c.balance) + " open · " + c.invoices.length + " invoice" + (c.invoices.length === 1 ? "" : "s") + " · oldest " + c.oldestDays + " days overdue";
-      var flags = c.flags.map(function (f) { return "<li>" + esc(f) + "</li>"; });
+      var flags = c.flags.map(function (f) { return "<li>" + esc(mask(f)) + "</li>"; });
       if (c.toneNote && c.action === "chase") flags.push('<li class="tone">' + esc(c.toneNote) + "</li>");
-      if (d.rejected) flags.push("<li>Claude draft failed a rule check (" + esc(d.rejected[0]) + "), template used</li>");
+      if (d.rejected) flags.push("<li>Claude draft failed a rule check (" + esc(mask(d.rejected[0])) + "), template used</li>");
       var hd = '<div class="hd"><div class="row1"><div><div class="cname">' + esc(c.name) + "</div>" +
         '<div class="facts num">' + facts + "</div></div>" +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">' + tierBadge(c) +

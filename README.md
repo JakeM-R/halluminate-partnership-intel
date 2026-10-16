@@ -10,14 +10,14 @@ A working prototype by Jake Makking-Robinson for SnapMagic's finance operations 
 4. **Slack summary:** a three-line digest for the CEO.
 5. **Make it run itself:** a Google Apps Script that applies the same aging and rubric to a Sheet every other Monday, saves Gmail drafts and posts the digest to Slack. Setup takes five steps.
 
-**Demo data is fictional** and labelled on the page and on every row. The dates are generated relative to today, so the demo looks the same whenever it's opened.
+**Demo data is fictional** and labelled on the page and on every row. The customers are generic (Customer A to L), and in demo mode every dollar figure on the page shows as `$xx`. The bars keep their proportions, and an uploaded export shows real amounts. The dates are generated relative to today, so the demo looks the same whenever it's opened.
 
 ## Layout
 
 | Path | What |
 |---|---|
 | `site/ar.js` | Core: CSV parser, column mapper, aging, rubric, templates, validator and Slack digest. Has no DOM or network code, so the same file runs in the browser, in Node tests and in Apps Script. |
-| `site/demo.js` | Demo dataset: 30 invoices across 12 customers, with every edge case seeded. |
+| `site/demo.js` | Demo dataset: 30 invoices across 12 generic customers (A to L), with every edge case seeded. |
 | `site/app.js`, `site/index.html` | The page. |
 | `site/sheet-runner.js` | Apps Script glue. The page builds `Code.gs` by joining `ar.js` and this file, so the scheduled script uses the same code as the page. |
 | `worker/` | Cloudflare Worker that drafts with Claude. Rate-capped, and it builds the prompt itself, so callers can't use it as an open proxy. |
