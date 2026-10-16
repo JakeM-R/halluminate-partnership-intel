@@ -185,7 +185,7 @@
   function requestModelDrafts() {
     var res = state.result;
     var targets = res.customers.filter(function (c) { return c.action === "chase" || c.action === "billing"; });
-    if (!WORKER_URL) { setStatus("", "Drafts: fixed templates per tier (AI drafting not configured)"); return; }
+    if (!WORKER_URL) { setStatus("", "Drafts from fixed templates per tier."); return; }
     if (!targets.length) { setStatus("", "Nothing to draft this run"); return; }
     var runId = ++state.runId;
     setStatus("busy", "Drafting with AI… templates shown meanwhile");
@@ -381,7 +381,7 @@
       "<li><b>No late payments in 12 months:</b> tone one step softer. <b>Two or more:</b> one step firmer. Tier stays for routing.</li>" +
       "<li><b>Over 20% of total AR:</b> flagged “Needs action”, still drafted.</li>" +
       "<li><b>Missing contact email:</b> no draft, flagged for data cleanup.</li>" +
-      "<li><b>Hard rules:</b> figures only from the export, no legal or collections language, no fees unless the terms state one, under 120 words, no exclamation marks. AI drafts are checked against these and replaced by the template if they fail.</li></ul>";
+      "<li><b>Hard rules:</b> figures only from the export, no legal or collections language, no fees unless the terms state one, under 120 words, no exclamation marks.</li></ul>";
   }
 
   // ---------- Copy helpers ----------
