@@ -10,7 +10,7 @@
 
   var state = {
     source: "demo", fileName: "", rows: [], headers: [], map: {},
-    sort: { aging: "overdue", drafts: "overdue" }, tab: "demo", runDate: todayUTC(), settings: Object.assign({}, AR.DEFAULT_SETTINGS),
+    sort: { aging: "overdue", drafts: "overdue" }, onlyYou: { aging: false, drafts: false }, tab: "demo", runDate: todayUTC(), settings: Object.assign({}, AR.DEFAULT_SETTINGS),
     result: null, drafts: {}, dirty: {}, open: {}, draftMode: "template", runId: 0
   };
 
@@ -239,8 +239,8 @@
   }
 
   // "overdue": oldest invoice first. "amount": largest open balance first.
-  function sorted(list, by) {
-    return list.slice().sort(function (a, b) {
+  function sorted(list, by, onlyYou) {
+    return list.filter(function (c) { return !onlyYou || c.needsYou; }).sort(function (a, b) {
       return by === "amount" ? (b.balance - a.balance) || (b.oldestDays - a.oldestDays)
         : (b.oldestDays - a.oldestDays) || (b.balance - a.balance);
     });
@@ -252,7 +252,8 @@
       return '<span><i style="background:var(' + BUCKET_VARS[b.key] + ')"></i>' + b.label + (b.key === "current" ? "" : " days") + "</span>";
     }).join("");
     var head = "<thead><tr><th>Customer</th>" + AR.BUCKETS.map(function (b) { return "<th>" + b.label + "</th>"; }).join("") + "<th>Total</th><th></th></tr></thead>";
-    var body = sorted(res.customers, state.sort.aging).map(function (c) {
+    var rows = sorted(res.customers, state.sort.aging, state.onlyYou.aging);
+    var body = rows.map(function (c) {
       var bar = AR.BUCKETS.map(function (b) {
         var v = c.buckets[b.key];
         return v ? '<span style="width:' + (v / c.balance * 100).toFixed(2) + "%;background:var(" + BUCKET_VARS[b.key] + ')" title="' + b.label + ": " + money(v) + '"></span>' : "";
@@ -266,9 +267,10 @@
         '<td class="tot">' + money(c.balance) + '</td><td class="barcell"><div class="bar" role="img" aria-label="' + esc(c.name) + " aging split\">" + bar + "</div></td></tr>";
     }).join("");
     var tot = { current: 0, b1: 0, b31: 0, b61: 0, b90: 0 };
-    res.customers.forEach(function (c) { Object.keys(tot).forEach(function (k) { tot[k] += c.buckets[k]; }); });
-    var foot = "<tfoot><tr><td>Total</td>" + AR.BUCKETS.map(function (b) { return '<td class="b">' + money(tot[b.key]) + "</td>"; }).join("") +
-      '<td class="tot">' + money(res.totalAR) + "</td><td></td></tr></tfoot>";
+    var shownTotal = 0;
+    rows.forEach(function (c) { shownTotal += c.balance; Object.keys(tot).forEach(function (k) { tot[k] += c.buckets[k]; }); });
+    var foot = "<tfoot><tr><td>" + (state.onlyYou.aging ? "Total, needs you" : "Total") + "</td>" + AR.BUCKETS.map(function (b) { return '<td class="b">' + money(tot[b.key]) + "</td>"; }).join("") +
+      '<td class="tot">' + money(shownTotal) + "</td><td></td></tr></tfoot>";
     $("aging").innerHTML = head + "<tbody>" + body + "</tbody>" + foot;
 
     var ex = res.excluded, parts = [];
@@ -290,7 +292,7 @@
 
   function renderCards() {
     var res = state.result;
-    var shown = sorted(res.customers.filter(function (c) { return c.tier >= 1; }), state.sort.drafts);
+    var shown = sorted(res.customers.filter(function (c) { return c.tier >= 1; }), state.sort.drafts, state.onlyYou.drafts);
     $("cards").innerHTML = shown.map(function (c) {
       var d = state.drafts[c.id];
       var facts = money(c.balance) + " open · " + c.invoices.length + " invoice" + (c.invoices.length === 1 ? "" : "s") + " · " + c.oldestDays + " days overdue";
@@ -325,7 +327,7 @@
     document.querySelectorAll("#cards textarea").forEach(fit);
 
     var listed = res.customers.filter(function (c) { return c.tier === 0; });
-    $("listed").innerHTML = listed.length
+    $("listed").innerHTML = listed.length && !state.onlyYou.drafts
       ? "<b>Not yet due, no action:</b> " + listed.map(function (c) { return esc(c.name) + " (" + money(c.balance) + ")"; }).join(", ")
       : "";
   }
@@ -397,9 +399,14 @@
   });
   document.querySelectorAll(".seg").forEach(function (seg) {
     seg.addEventListener("click", function (e) {
-      var by = e.target.dataset && e.target.dataset.sort; if (!by) return;
-      state.sort[seg.dataset.list] = by;
-      seg.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.sort === by); });
+      var d = e.target.dataset || {}, list = seg.dataset.list;
+      if (d.filter === "you") {
+        state.onlyYou[list] = !state.onlyYou[list];
+        e.target.setAttribute("aria-pressed", state.onlyYou[list]);
+      } else if (d.sort) {
+        state.sort[list] = d.sort;
+        seg.querySelectorAll("[data-sort]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.sort === d.sort); });
+      } else return;
       if (seg.dataset.list === "aging") renderAging(); else renderCards();
     });
   });
