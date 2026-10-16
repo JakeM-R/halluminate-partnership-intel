@@ -24,6 +24,8 @@ jobs:
           node-version: "22"
       - name: Aging, rubric and draft rules must pass the test set
         run: node --test tests/*.test.js
+      - name: Stamp script URLs with the commit so browsers never mix old and new files
+        run: sed -i "s/__V__/${GITHUB_SHA::7}/g" site/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
