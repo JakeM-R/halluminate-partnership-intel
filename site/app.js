@@ -11,7 +11,7 @@
   var state = {
     source: "demo", fileName: "", rows: [], headers: [], map: {},
     runDate: todayUTC(), settings: Object.assign({}, AR.DEFAULT_SETTINGS),
-    result: null, drafts: {}, dirty: {}, draftMode: "template", runId: 0
+    result: null, drafts: {}, dirty: {}, open: {}, draftMode: "template", runId: 0
   };
 
   function todayUTC() { var d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); }
@@ -218,23 +218,25 @@
     shown.sort(function (a, b) { return (b.needsYou - a.needsYou) || (b.tier - a.tier) || (b.balance - a.balance); });
     $("cards").innerHTML = shown.map(function (c) {
       var d = state.drafts[c.id];
-      var facts = money(c.balance) + " open · " + c.invoices.length + " invoice" + (c.invoices.length === 1 ? "" : "s") + " · oldest " + c.oldestDays + " days overdue";
+      var facts = money(c.balance) + " open · " + c.invoices.length + " invoice" + (c.invoices.length === 1 ? "" : "s") + " · oldest " + c.oldestDays + "d overdue";
       var flags = c.flags.map(function (f) { return "<li>" + esc(mask(f)) + "</li>"; });
       if (c.toneNote && c.action === "chase") flags.push('<li class="tone">' + esc(c.toneNote) + "</li>");
       if (d.rejected) flags.push("<li>Claude draft failed a rule check (" + esc(mask(d.rejected[0])) + "), template used</li>");
-      var hd = '<div class="hd"><div class="row1"><div><div class="cname">' + esc(c.name) + "</div>" +
-        '<div class="facts num">' + facts + "</div></div>" +
-        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">' + tierBadge(c) +
-        (c.needsYou ? '<span class="tag you">Needs you</span>' : "") + (isDemo() ? '<span class="tag demo">Demo</span>' : "") + "</div></div>" +
-        (flags.length ? '<ul class="flags">' + flags.join("") + "</ul>" : "") + "</div>";
+      var why = c.tier === 5 ? "Over 90 days. This needs a call from you, not another email."
+        : !c.email ? "No contact email in the export. Fix the record and re-run."
+        : "Check this account before anything goes out.";
+      var preview = d.body ? d.subject : why;
+      var summary = '<summary><div class="sl"><div class="cname">' + esc(c.name) + "</div>" +
+        '<div class="facts num">' + (isDemo() ? '<span class="tag demo">Demo</span> ' : "") + facts + "</div>" +
+        '<div class="preview">' + esc(preview) + "</div></div>" +
+        '<div class="sr2">' + (c.needsYou ? '<span class="tag you">Needs you</span>' : "") + tierBadge(c) +
+        '<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></summary>';
+      var fl = flags.length ? '<ul class="flags">' + flags.join("") + "</ul>" : "";
       var bd;
       if (!d.body) {
-        var why = c.tier === 5 ? "Over 90 days. This needs a call from you, not another email."
-          : !c.email ? "No contact email in the export. Fix the record and re-run."
-          : "Check this account before anything goes out.";
-        bd = '<div class="needs"><b>Needs you</b><p>' + esc(why) + "</p></div>";
+        bd = '<div class="bd">' + fl + '<div class="needs"><b>Needs you</b><p>' + esc(why) + "</p></div></div>";
       } else {
-        bd = '<div class="bd"><div class="addr"><b>To</b> ' + esc(d.to) + (d.cc ? " · <b>Cc</b> " + esc(d.cc) : "") +
+        bd = '<div class="bd">' + fl + '<div class="addr"><b>To</b> ' + esc(d.to) + (d.cc ? " · <b>Cc</b> " + esc(d.cc) : "") +
           (c.tier === 4 ? " · <b>Send from founder</b>" : "") + "</div>" +
           '<input class="subj" data-id="' + c.id + '" aria-label="Subject" value="' + esc(d.subject) + '">' +
           '<textarea data-id="' + c.id + '" aria-label="Email body" spellcheck="true">' + esc(d.body) + "</textarea>" +
@@ -242,7 +244,7 @@
           '<a class="btn" target="_blank" rel="noopener" data-gmail="' + c.id + '" href="' + gmailUrl(d) + '">Open in Gmail</a>' +
           '<span class="src">' + (d.source === "claude" ? "Drafted by Claude" : "Template") + (state.dirty[c.id] ? " · edited" : "") + "</span></div></div>";
       }
-      return '<article class="card' + (c.needsYou ? " you" : "") + '">' + hd + bd + "</article>";
+      return '<details class="card' + (c.needsYou ? " you" : "") + '" data-card="' + c.id + '"' + (state.open[c.id] ? " open" : "") + ">" + summary + bd + "</details>";
     }).join("");
 
     document.querySelectorAll("#cards textarea").forEach(fit);
@@ -329,6 +331,13 @@
     $("settings").open = false;
     runAnalysis();
   });
+
+  // Cards are collapsed by default; remember which are open across re-renders.
+  $("cards").addEventListener("toggle", function (e) {
+    var el = e.target; if (!el.dataset || el.dataset.card == null) return;
+    state.open[el.dataset.card] = el.open;
+    if (el.open) el.querySelectorAll("textarea").forEach(fit);
+  }, true);
 
   $("cards").addEventListener("input", function (e) {
     var id = e.target.dataset.id; if (id == null) return;

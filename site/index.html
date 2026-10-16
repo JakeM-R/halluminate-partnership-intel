@@ -17,6 +17,7 @@
   --orange:#EE8038; --orange-ink:#B85A1C; --orange-soft:#FDF0E6;
   --navy:#34507A; --navy-soft:#EAEFF6;
   --indigo:#1F1F6E;
+  --you:#3A2FB8; --you-soft:#EEEDFB; --you-line:#C9C5F2;
   --surface:#F5F5F5; --line:#E2E2E2; --line-2:#D0D0D0;
   --bg:#FFFFFF;
   --ink:#1D2430; --ink-2:#4A5361; --ink-3:#7A818C;
@@ -84,8 +85,8 @@ h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
 .callouts{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
 .callout{font-size:13px;padding:6px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--line);color:var(--ink-2)}
 .callout b{color:var(--ink)}
-.callout.you{background:var(--orange-soft);border-color:#F6CBA9;color:var(--orange-ink)}
-.callout.you b{color:var(--orange-ink)}
+.callout.you{background:var(--you-soft);border-color:var(--you-line);color:var(--you)}
+.callout.you b{color:var(--you)}
 
 /* Mapper */
 .mapper{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:20px;margin-bottom:32px}
@@ -117,7 +118,7 @@ h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
 .bar span+span{box-shadow:inset 1px 0 0 #fff}
 .tag{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
 .tag.demo{background:var(--orange-soft);color:var(--orange-ink)}
-.tag.you{background:var(--orange);color:#fff}
+.tag.you{background:var(--you);color:#fff}
 .excluded{margin-top:12px;font-size:12px;color:var(--ink-3)}
 
 /* Drafts */
@@ -125,28 +126,35 @@ h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
 .status .dot{width:8px;height:8px;border-radius:50%;background:var(--line-2)}
 .status.ok .dot{background:#4C8C6A}
 .status.busy .dot{background:var(--b-1)}
-.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.card{border:1px solid var(--line);border-radius:var(--r);background:var(--bg);display:flex;flex-direction:column;min-width:0}
-.card.you{border-color:#F6CBA9}
-.card .hd{padding:16px 16px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
-.card .row1{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.cards{display:flex;flex-direction:column;gap:8px}
+.card{border:1px solid var(--line);border-radius:var(--r);background:var(--bg);min-width:0}
+.card.you{border-color:var(--you-line);box-shadow:inset 3px 0 0 var(--you)}
+.card summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--r)}
+.card summary::-webkit-details-marker{display:none}
+.card summary:hover{background:var(--surface)}
+.card[open] summary{border-bottom:1px solid var(--line);border-radius:var(--r) var(--r) 0 0}
+.card .sl{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .card .cname{font-weight:600;font-size:15px;line-height:1.3;overflow-wrap:anywhere}
-.card .facts{font-size:12px;color:var(--ink-2)}
+.card .facts{font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.card .preview{font-size:13px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .sr2{display:flex;align-items:center;gap:8px;flex:none}
+.card .chev{width:16px;height:16px;color:var(--ink-3);transition:transform .15s}
+.card[open] .chev{transform:rotate(180deg)}
 .tier{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid}
 .tier i{width:8px;height:8px;border-radius:2px}
 .flags{display:flex;flex-direction:column;gap:4px;margin:0;padding:0;list-style:none;font-size:12px;color:var(--ink-2)}
 .flags li::before{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--ink-3);margin:0 8px 2px 0}
 .flags li.tone::before{background:var(--navy)}
-.card .bd{padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
+.card .bd{padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px}
 .addr{font-size:12px;color:var(--ink-3);overflow-wrap:anywhere}
 .addr b{color:var(--ink-2);font-weight:500}
 .card input.subj{width:100%;height:34px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font-weight:600;font-size:13px;background:var(--surface)}
-.card textarea{width:100%;min-height:180px;overflow:hidden;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;line-height:1.55;resize:vertical;background:var(--surface);flex:none}
+.card textarea{width:100%;min-height:120px;overflow:hidden;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;line-height:1.55;resize:vertical;background:var(--surface)}
 .card input.subj:focus,.card textarea:focus{background:var(--bg);border-color:var(--line-2)}
 .card .ft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .card .src{margin-left:auto;font-size:11px;color:var(--ink-3)}
-.needs{padding:16px;display:flex;flex-direction:column;gap:8px;flex:1;justify-content:center;background:var(--orange-soft);border-radius:0 0 var(--r) var(--r)}
-.needs b{color:var(--orange-ink);font-size:14px}
+.needs{padding:12px 14px;display:flex;flex-direction:column;gap:4px;background:var(--you-soft);border-radius:8px}
+.needs b{color:var(--you);font-size:14px}
 .needs p{margin:0;font-size:13px;color:var(--ink-2)}
 .listed{margin-top:16px;font-size:13px;color:var(--ink-2)}
 
@@ -183,7 +191,6 @@ footer p{margin:4px 0;max-width:720px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
 @media (max-width:760px){
-  .cards{grid-template-columns:1fr}
 }
 @media (max-width:640px){
   .wrap{padding:0 16px}
@@ -211,6 +218,9 @@ footer p{margin:4px 0;max-width:720px}
   .aging td.barcell{grid-column:1 / -1;width:auto}
   .aging tfoot tr{border-bottom:none}
   .slack{flex-direction:column}
+  .card summary{align-items:flex-start;padding:12px}
+  .card .sr2{flex-direction:column;align-items:flex-end;gap:6px}
+  .card .chev{order:-1}
   .built span.long{display:none}
 }
 </style>
@@ -272,7 +282,7 @@ footer p{margin:4px 0;max-width:720px}
 
   <section id="drafts">
     <h2>Chaser drafts</h2>
-    <p class="sub">One email per customer, covering every open invoice. The tier comes from the oldest overdue invoice; tone moves a step with payment history. Edit in place, then copy or open in Gmail.</p>
+    <p class="sub">One email per customer, covering every open invoice. The tier comes from the oldest overdue invoice; tone moves a step with payment history. Tap a customer to open the draft, edit it in place, then copy or open in Gmail.</p>
     <div class="status" id="draftStatus"><span class="dot"></span><span></span></div>
     <div class="cards" id="cards"></div>
     <p class="listed" id="listed"></p>
