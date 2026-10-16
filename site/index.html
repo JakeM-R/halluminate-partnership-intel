@@ -220,6 +220,12 @@ details.guide>.sub.small{font-size:12px;color:var(--ink-3);margin:12px 0 16px}
 .need.req{background:var(--navy);color:#fff}
 .need.rec{background:var(--navy-soft);color:var(--navy)}
 .need.opt{color:var(--ink-3)}
+/* Sort control */
+.seg{display:flex;align-items:center;gap:4px;margin:0 0 12px;font-size:12px;color:var(--ink-3);flex-wrap:wrap}
+.seg span{margin-right:4px}
+.seg button{height:28px;padding:0 10px;border:1px solid var(--line);border-radius:999px;background:var(--bg);font-size:12px;font-weight:500;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
 .sm{display:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
@@ -325,7 +331,8 @@ details.guide>.sub.small{font-size:12px;color:var(--ink-3);margin:12px 0 16px}
 
   <section id="agingSec">
     <h2>Aging by customer</h2>
-    <p class="sub">Each bar is one customer's open balance, split by days past due at the run date. Sorted by dollars at risk (older money weighs more).</p>
+    <p class="sub">Each bar is one customer's open balance, split by days past due at the run date.</p>
+    <div class="seg" role="group" aria-label="Sort" data-list="aging"><span>Sort</span><button type="button" data-sort="overdue" aria-pressed="true">Most overdue</button><button type="button" data-sort="amount" aria-pressed="false">Largest amount</button></div>
     <div class="legend" id="legend"></div>
     <table class="aging num" id="aging"></table>
     <p class="excluded" id="excluded"></p>
@@ -335,6 +342,7 @@ details.guide>.sub.small{font-size:12px;color:var(--ink-3);margin:12px 0 16px}
     <h2>Chaser drafts</h2>
     <p class="sub">One email per customer, covering every open invoice. The tier comes from the oldest overdue invoice; tone moves a step with payment history. Tap a customer to open the draft, edit it in place, then copy or open in Gmail.</p>
     <div class="status" id="draftStatus"><span class="dot"></span><span></span></div>
+    <div class="seg" role="group" aria-label="Sort" data-list="drafts"><span>Sort</span><button type="button" data-sort="overdue" aria-pressed="true">Most overdue</button><button type="button" data-sort="amount" aria-pressed="false">Largest amount</button></div>
     <div class="cards" id="cards"></div>
     <p class="listed" id="listed"></p>
     <details class="rubric">

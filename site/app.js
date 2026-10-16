@@ -10,7 +10,7 @@
 
   var state = {
     source: "demo", fileName: "", rows: [], headers: [], map: {},
-    tab: "demo", runDate: todayUTC(), settings: Object.assign({}, AR.DEFAULT_SETTINGS),
+    sort: { aging: "overdue", drafts: "overdue" }, tab: "demo", runDate: todayUTC(), settings: Object.assign({}, AR.DEFAULT_SETTINGS),
     result: null, drafts: {}, dirty: {}, open: {}, draftMode: "template", runId: 0
   };
 
@@ -238,13 +238,21 @@
     return mask(AR.slackDigest(state.result).replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"));
   }
 
+  // "overdue": oldest invoice first. "amount": largest open balance first.
+  function sorted(list, by) {
+    return list.slice().sort(function (a, b) {
+      return by === "amount" ? (b.balance - a.balance) || (b.oldestDays - a.oldestDays)
+        : (b.oldestDays - a.oldestDays) || (b.balance - a.balance);
+    });
+  }
+
   function renderAging() {
     var res = state.result;
     $("legend").innerHTML = AR.BUCKETS.map(function (b) {
       return '<span><i style="background:var(' + BUCKET_VARS[b.key] + ')"></i>' + b.label + (b.key === "current" ? "" : " days") + "</span>";
     }).join("");
     var head = "<thead><tr><th>Customer</th>" + AR.BUCKETS.map(function (b) { return "<th>" + b.label + "</th>"; }).join("") + "<th>Total</th><th></th></tr></thead>";
-    var body = res.customers.map(function (c) {
+    var body = sorted(res.customers, state.sort.aging).map(function (c) {
       var bar = AR.BUCKETS.map(function (b) {
         var v = c.buckets[b.key];
         return v ? '<span style="width:' + (v / c.balance * 100).toFixed(2) + "%;background:var(" + BUCKET_VARS[b.key] + ')" title="' + b.label + ": " + money(v) + '"></span>' : "";
@@ -282,8 +290,7 @@
 
   function renderCards() {
     var res = state.result;
-    var shown = res.customers.filter(function (c) { return c.tier >= 1; });
-    shown.sort(function (a, b) { return (b.needsYou - a.needsYou) || (b.tier - a.tier) || (b.balance - a.balance); });
+    var shown = sorted(res.customers.filter(function (c) { return c.tier >= 1; }), state.sort.drafts);
     $("cards").innerHTML = shown.map(function (c) {
       var d = state.drafts[c.id];
       var facts = money(c.balance) + " open · " + c.invoices.length + " invoice" + (c.invoices.length === 1 ? "" : "s") + " · " + c.oldestDays + " days overdue";
@@ -387,6 +394,14 @@
   $("file").addEventListener("change", function (e) { if (e.target.files[0]) loadFile(e.target.files[0]); e.target.value = ""; });
   $("uploadPanel").addEventListener("keydown", function (e) {
     if (e.target.hasAttribute && e.target.hasAttribute("data-pick") && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); $("file").click(); }
+  });
+  document.querySelectorAll(".seg").forEach(function (seg) {
+    seg.addEventListener("click", function (e) {
+      var by = e.target.dataset && e.target.dataset.sort; if (!by) return;
+      state.sort[seg.dataset.list] = by;
+      seg.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.sort === by); });
+      if (seg.dataset.list === "aging") renderAging(); else renderCards();
+    });
   });
   $("tabDemo").addEventListener("click", function () { setTab("demo"); });
   $("tabUpload").addEventListener("click", function () { setTab("upload"); });
