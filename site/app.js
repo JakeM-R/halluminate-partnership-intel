@@ -244,11 +244,10 @@
       return '<span><i style="background:var(' + BUCKET_VARS[b.key] + ')"></i>' + b.label + (b.key === "current" ? "" : " days") + "</span>";
     }).join("");
     var head = "<thead><tr><th>Customer</th>" + AR.BUCKETS.map(function (b) { return "<th>" + b.label + "</th>"; }).join("") + "<th>Total</th><th></th></tr></thead>";
-    var max = Math.max.apply(null, res.customers.map(function (c) { return c.balance; }).concat([1]));
     var body = res.customers.map(function (c) {
       var bar = AR.BUCKETS.map(function (b) {
         var v = c.buckets[b.key];
-        return v ? '<span style="width:' + (v / max * 100).toFixed(2) + "%;background:var(" + BUCKET_VARS[b.key] + ')" title="' + b.label + ": " + money(v) + '"></span>' : "";
+        return v ? '<span style="width:' + (v / c.balance * 100).toFixed(2) + "%;background:var(" + BUCKET_VARS[b.key] + ')" title="' + b.label + ": " + money(v) + '"></span>' : "";
       }).join("");
       var meta = [];
       if (isDemo()) meta.push('<span class="tag demo">Demo</span>');
