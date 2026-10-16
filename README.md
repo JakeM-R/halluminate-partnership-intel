@@ -1,39 +1,67 @@
-# Expert onboarding
+# SnapMagic AR chaser
 
-Can a new finance expert go from sign-up to ready-to-work without a person walking them through it?
+Who owes us money this fortnight, and what do I send each of them?
 
-**Live:** https://jakem-r.github.io/halluminate-partnership-intel/
+A working prototype by Jake Makking-Robinson for SnapMagic's finance operations remit: "run aging reports every two weeks, answer billing questions." Upload a HubSpot or QuickBooks invoice export (or use the demo data) and the page gives you:
 
-A working prototype by Jake Makking-Robinson, built for Halluminate's Chief of Staff and People Platform Lead roles ("building from scratch HR, Onboarding, Ops"; "building systems to formalize sourcing, training, onboarding, and HR for experts").
+1. **A to-do headline:** customers to chase, total outstanding and the amount over 30 days, with the run date and the next run 14 days out.
+2. **Aging by customer:** current, 1–30, 31–60, 61–90 and 90+ buckets, sorted by dollars at risk, with a count of excluded rows (paid, zero or negative balance, missing due date, duplicate invoice #).
+3. **Chaser drafts:** one email per customer covering every open invoice, tiered by the oldest overdue invoice. Each draft can be edited, copied or opened in Gmail. Tier 5, accounts over 20% of AR and records with a missing email are flagged "Needs you."
+4. **Slack summary:** a three-line digest for the CEO.
+5. **Make it run itself:** a Google Apps Script that applies the same aging and rubric to a Sheet every other Monday, saves Gmail drafts and posts the digest to Slack. Setup takes five steps.
 
-## Expert view (about 10 minutes)
+**Demo data is fictional** and labelled on the page and on every row. The dates are generated relative to today, so the demo looks the same whenever it's opened.
 
-1. **Orientation:** what experts do and what a good review looks like.
-2. **Sample task:** review a model's answer to a diligence question, claim by claim. Mark each claim sound or wrong, name the error type, give the right figure where there is one, and decide whether to sign it off.
-3. **Feedback:** instant, per claim: what you caught, what you missed, and why it matters.
-4. **Readiness:** ready, ready after one calibration task, or not yet, with strengths, gaps, a suggested first task type and the record that would go to the operator queue.
+## Layout
 
-The sample task is **illustrative**. I wrote it from public descriptions of Westworld Finance Diligence Bench. It isn't a Halluminate task, and the company and every number are fictional.
+| Path | What |
+|---|---|
+| `site/ar.js` | Core: CSV parser, column mapper, aging, rubric, templates, validator and Slack digest. Has no DOM or network code, so the same file runs in the browser, in Node tests and in Apps Script. |
+| `site/demo.js` | Demo dataset: 30 invoices across 12 customers, with every edge case seeded. |
+| `site/app.js`, `site/index.html` | The page. |
+| `site/sheet-runner.js` | Apps Script glue. The page builds `Code.gs` by joining `ar.js` and this file, so the scheduled script uses the same code as the page. |
+| `worker/` | Cloudflare Worker that drafts with Claude. Rate-capped, and it builds the prompt itself, so callers can't use it as an open proxy. |
+| `tests/ar.test.js` | The PRD test set plus checks on the validator, the demo data and the Apps Script. Uses mocked Sheets, Gmail and Slack. |
 
-## Operator view
+## How drafting works
 
-A funnel (sourced → started → submitted → ready) with step drop-off, outcome split, and per-claim miss rates. **These are demo figures, labelled as such on the page.** The grader checks at the bottom are real and run in the browser.
+Parsing and aging run in the browser. With no Worker configured, the page uses fixed templates for each tier, so an external viewer always gets output. With a Worker configured, the page sends one summary per customer (name, balances, days overdue, invoice list and late history, but no emails or raw rows). Claude writes the body. Every model draft is then checked in the browser against the hard rules:
 
-The view sits behind a click-through gate ("Continue as demo operator"), because in production it would be behind company sign-in, and its miss-rate table shows which claims are wrong. `#operator` links straight past the gate.
+- Figures, day counts and invoice numbers must come from the input.
+- No legal or collections language.
+- No fees unless the terms field states one.
+- Under 120 words, with no exclamation marks.
+- The configured sign-off must be present.
 
-## How the grading works
+A draft that fails any check is replaced by the template, and the card says why. The subject line is always computed in code.
 
-`site/grader.js` grades against the rubric and answer key in `site/task.js`. It doesn't call a model, so the same review always gets the same feedback and nothing freestyles on finance reasoning. Errors are weighted by severity (the covenant conclusion is critical), a right catch with the wrong label gets partial credit, and flagging sound claims costs points.
+Template bodies never include the customer name, so a hostile name in the export can't steer the text. The test set includes a prompt-injection case.
 
-`site/test-answers.js` holds deliberately strong, average and weak reviews. `tests/grader.test.js` checks that each lands in the right tier and gets the right per-claim feedback, and that the answer key's own arithmetic holds. CI runs it before every deploy.
+### Deploying the Worker
+
+```bash
+cd worker
+npm install
+npx wrangler secret put ANTHROPIC_API_KEY
+npx wrangler deploy
+```
+
+Then put the Worker URL in `<meta name="worker-url">` in `site/index.html`. `ALLOWED_ORIGINS` in `wrangler.toml` limits which pages can call it. The per-IP cap is 10 requests per 10 minutes. To add a hard daily cap of 300 requests, bind a KV namespace as `RATE` (instructions are in `wrangler.toml`).
+
+## Run locally
 
 ```bash
 node --test tests/*.test.js
 python3 -m http.server -d site
 ```
 
-Static files only, no keys, no backend. GitHub Pages deploys on push to `main`.
+GitHub Pages deploys `site/` on every push to `main`, after the tests pass.
 
-## Next
+## Notes and open items
 
-A short screening step in front of onboarding that routes applicants to task types.
+- **Palette:** the values are the PRD's by-eye samples from snapeda.com (orange `#EE8038`, slate navy `#34507A`, indigo `#1F1F6E`, surface `#F5F5F5`/`#E2E2E2`). The build environment couldn't reach snapeda.com, so they haven't been eyedropped yet.
+- **Logo:** "Built for SnapMagic" shows as a text wordmark for the same reason. Their unmodified logo file still needs adding to the header.
+- **Dates:** slash dates are read as US format (MM/DD/YYYY), as US HubSpot and QuickBooks exports produce them.
+- **Late history:** the late-history modifiers need a paid-date column. Without one, tone follows tier.
+- **Out of scope:** live HubSpot or QuickBooks auth, sending email, DSO trends, multi-currency and payroll.
+- **Next (+5 working days):** promise-to-pay tracking. Log a customer's committed date, and the next run checks it before drafting: kept, broken (step up a tier) or pending (skip).

@@ -3,281 +3,320 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Expert Onboarding</title>
-<meta name="description" content="A working onboarding flow for finance experts: orientation, a sample review task, instant feedback against an answer key, and a readiness call. Prototype by Jake Makking-Robinson.">
+<title>AR Chaser</title>
+<meta name="description" content="Who owes SnapMagic money this fortnight, and what to send each of them. Aging by customer, tiered chaser drafts, a Slack digest and an Apps Script that runs it every 14 days. Prototype by Jake Makking-Robinson.">
+<!-- Set to the deployed Worker URL to draft with Claude. Empty means templates only. -->
+<meta name="worker-url" content="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lilex:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23213547'/><path d='M9 17l5 5 9-12' stroke='%239DA3DF' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2334507A'/><rect x='7' y='17' width='4' height='8' rx='1' fill='%23F5F5F5'/><rect x='14' y='12' width='4' height='13' rx='1' fill='%23F2B544'/><rect x='21' y='7' width='4' height='18' rx='1' fill='%23EE8038'/></svg>">
 <style>
 :root{
-  --bg:#ffffff; --bg-2:#f7f7fa; --line:#e6e7ee; --line-2:#d4d6e2;
-  --ink:#213547; --ink-2:#4d5e70; --ink-3:#7c8797;
-  --accent:#3b48bf; --accent-soft:#eceefb; --accent-ink:#ffffff;
-  --ok:#2f7a55; --ok-soft:#e7f3ec; --bad:#b03a3a; --bad-soft:#f8eaea; --warn:#8a6a1e; --warn-soft:#f6f0e0;
-  --sans:"Inter",system-ui,-apple-system,sans-serif; --mono:"Lilex",ui-monospace,Menlo,monospace;
+  /* Sampled by eye from snapeda.com; see README. */
+  --orange:#EE8038; --orange-ink:#B85A1C; --orange-soft:#FDF0E6;
+  --navy:#34507A; --navy-soft:#EAEFF6;
+  --indigo:#1F1F6E;
+  --surface:#F5F5F5; --line:#E2E2E2; --line-2:#D0D0D0;
+  --bg:#FFFFFF;
+  --ink:#1D2430; --ink-2:#4A5361; --ink-3:#7A818C;
+  --b-current:#A7B5C8; --b-1:#F2B544; --b-31:#EE8038; --b-61:#B5532A; --b-90:#34507A;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:12px;
   color-scheme:light;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#12161c; --bg-2:#181d25; --line:#262c37; --line-2:#333b48;
-  --ink:#e4e8ee; --ink-2:#aab3c0; --ink-3:#7d8796;
-  --accent:#8e97ea; --accent-soft:#232945; --accent-ink:#12161c;
-  --ok:#6cc095; --ok-soft:#18291f; --bad:#e08484; --bad-soft:#2d1b1d; --warn:#d6b56a; --warn-soft:#2a2516;
-  color-scheme:dark;
-}}
-:root[data-theme="dark"]{
-  --bg:#12161c; --bg-2:#181d25; --line:#262c37; --line-2:#333b48;
-  --ink:#e4e8ee; --ink-2:#aab3c0; --ink-3:#7d8796;
-  --accent:#8e97ea; --accent-soft:#232945; --accent-ink:#12161c;
-  --ok:#6cc095; --ok-soft:#18291f; --bad:#e08484; --bad-soft:#2d1b1d; --warn:#d6b56a; --warn-soft:#2a2516;
-  color-scheme:dark;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
-.wrap{max-width:780px;margin:0 auto;padding:0 20px}
-a{color:var(--accent)}
-.mono{font-family:var(--mono)}
-.eyebrow{font:500 12px/1.4 var(--mono);color:var(--ink-3);letter-spacing:.02em;text-transform:uppercase}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans);font-feature-settings:"tnum" 1,"cv11" 1}
+a{color:var(--indigo)}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+.num{font-variant-numeric:tabular-nums}
+
+/* Header */
 header.top{border-bottom:1px solid var(--line)}
-header.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:14px;padding-bottom:14px}
-.brand{font:500 13px var(--mono);color:var(--ink-2)}
-.tabs{display:flex;gap:4px;background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:3px}
-.tabs button{border:0;background:none;font:500 13px var(--sans);color:var(--ink-2);padding:6px 12px;border-radius:6px;cursor:pointer}
-@media (max-width:620px){.tabs .int{display:none}}
-.tabs button[aria-selected="true"]{background:var(--bg);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
-.hero{padding:44px 0 24px}
-h1{font:600 30px/1.2 var(--sans);letter-spacing:-.02em;margin:10px 0 12px}
-.lede{color:var(--ink-2);margin:0;max-width:62ch}
-h2{font:600 20px/1.3 var(--sans);letter-spacing:-.01em;margin:0 0 10px}
-h3{font:600 15px/1.4 var(--sans);margin:22px 0 8px}
-p{margin:0 0 12px}
-.muted{color:var(--ink-2)} .faint{color:var(--ink-3)}
-.steps{display:flex;gap:0;margin:8px 0 28px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.steps li{list-style:none;flex:1;padding:10px 0;font:500 12px/1.3 var(--mono);color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px}
-.steps li b{display:block;font:500 13px var(--sans);color:var(--ink-3);margin-top:2px}
-.steps li.on{border-color:var(--accent);color:var(--accent)} .steps li.on b{color:var(--ink)}
-.steps li.done b{color:var(--ink-2)}
-.steps{padding:0}
-.panel{padding-bottom:56px}
-.note{border:1px solid var(--line);background:var(--bg-2);border-radius:8px;padding:12px 14px;font-size:13.5px;color:var(--ink-2);margin:0 0 18px}
-.note b{color:var(--ink)}
-.note.demo{border-color:var(--warn);background:var(--warn-soft);color:var(--ink)}
-.list{margin:0 0 16px;padding:0;list-style:none;counter-reset:n}
-.list li{counter-increment:n;position:relative;padding:8px 0 8px 34px;border-top:1px solid var(--line)}
-.list li:last-child{border-bottom:1px solid var(--line)}
-.list li::before{content:counter(n,decimal-leading-zero);position:absolute;left:0;top:9px;font:500 12px var(--mono);color:var(--accent)}
-.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:500 14px var(--sans);padding:10px 18px;border-radius:8px;cursor:pointer;transition:opacity .15s}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn.ghost{background:none;color:var(--accent)}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:20px}
-table.pack{width:100%;border-collapse:collapse;font-size:13.5px;margin:0 0 18px}
-table.pack th{text-align:left;font:500 12px/1.4 var(--mono);color:var(--ink-3);padding:8px 14px 8px 0;vertical-align:top;width:30%;border-top:1px solid var(--line)}
-table.pack td{padding:8px 0;border-top:1px solid var(--line);vertical-align:top}
-table.pack tr:last-child th,table.pack tr:last-child td{border-bottom:1px solid var(--line)}
-.q{border-left:2px solid var(--accent);padding:4px 0 4px 14px;margin:0 0 22px;font-weight:500}
-.claim{border-top:1px solid var(--line);padding:14px 0}
-.claim:last-of-type{border-bottom:1px solid var(--line)}
-.claim .head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between}
-.claim .num{font:500 12px var(--mono);color:var(--ink-3);min-width:22px;padding-top:3px}
-.claim .txt{flex:1}
-.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:7px;overflow:hidden;flex:none}
-.seg button{border:0;background:var(--bg);font:500 12.5px var(--sans);color:var(--ink-2);padding:6px 11px;cursor:pointer}
-.seg button+button{border-left:1px solid var(--line-2)}
-.seg button[aria-pressed="true"].ok{background:var(--ok-soft);color:var(--ok)}
-.seg button[aria-pressed="true"].bad{background:var(--bad-soft);color:var(--bad)}
-.detail{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 0 36px}
-.detail label{font-size:12.5px;color:var(--ink-2);display:flex;flex-direction:column;gap:4px}
-select,input[type=number]{font:14px var(--sans);color:var(--ink);background:var(--bg);border:1px solid var(--line-2);border-radius:6px;padding:7px 9px}
-input[type=number]{width:120px;font-family:var(--mono)}
-select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.signoff{margin-top:22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-.score{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 0 22px}
-.score div{padding:14px 0}
-.score div+div{padding-left:16px;border-left:1px solid var(--line)}
-.score .v{font:500 26px/1.1 var(--mono);letter-spacing:-.02em}
-.score .l{font-size:12.5px;color:var(--ink-2);margin-top:4px}
-.fb{border-top:1px solid var(--line);padding:14px 0 14px 0;display:grid;grid-template-columns:96px 1fr;gap:4px 14px}
-.fb:last-child{border-bottom:1px solid var(--line)}
-.tag{font:500 11.5px/1 var(--mono);padding:5px 7px;border-radius:5px;justify-self:start;white-space:nowrap}
-.tag.caught{background:var(--ok-soft);color:var(--ok)}
-.tag.missed{background:var(--bad-soft);color:var(--bad)}
-.tag.partial,.tag.false{background:var(--warn-soft);color:var(--warn)}
-.tag.agreed{background:var(--bg-2);color:var(--ink-3)}
-.fb .claimtxt{font-weight:500}
-.fb .why{color:var(--ink-2);font-size:14px;grid-column:2}
-.fb .extra{grid-column:2;font-size:13px;color:var(--ink-2)}
-.verdict{font:600 26px/1.25 var(--sans);letter-spacing:-.015em;margin:4px 0 10px}
-.verdict.ready{color:var(--ok)} .verdict.calibrate{color:var(--warn)} .verdict.not-yet{color:var(--bad)}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:18px 0}
-.two ul{margin:0;padding-left:18px;color:var(--ink-2)}
-.bar{height:6px;background:var(--bg-2);border-radius:3px;overflow:hidden;margin-top:4px}
-.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
-pre.record{background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:12.5px/1.55 var(--mono);white-space:pre-wrap;color:var(--ink-2);margin:0}
-/* operator */
-.funnel{margin:6px 0 26px}
-.fstep{display:grid;grid-template-columns:150px 1fr 70px;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
-.fstep:last-child{border-bottom:1px solid var(--line)}
-.fstep .name{font-size:14px}
-.fstep .track{height:22px;background:var(--bg-2);border-radius:4px;position:relative}
-.fstep .track i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:4px;opacity:.85}
-.fstep .n{font:500 14px var(--mono);text-align:right}
-.drop{grid-column:2/4;font:12px var(--mono);color:var(--bad);margin-top:-4px}
-table.t{width:100%;border-collapse:collapse;font-size:13.5px;margin:4px 0 24px}
-table.t th{text-align:left;font:500 12px var(--mono);color:var(--ink-3);padding:7px 10px 7px 0;border-bottom:1px solid var(--line-2)}
-table.t td{padding:8px 10px 8px 0;border-bottom:1px solid var(--line);vertical-align:top}
-table.t td.num,table.t th.num{text-align:right;font-family:var(--mono)}
-.pass{color:var(--ok);font:500 13px var(--mono)} .fail{color:var(--bad);font:500 13px var(--mono)}
-footer{border-top:1px solid var(--line);padding:20px 0 40px;font-size:13px;color:var(--ink-3)}
-[hidden]{display:none!important}
-@media (max-width:620px){
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;height:56px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:-.01em}
+.brand .mark{width:22px;height:22px}
+.built{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-3)}
+.built img{height:18px;width:auto;display:block}
+.built b{color:var(--navy);font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.demo{background:var(--orange-soft);color:var(--orange-ink)}
+.pill.file{background:var(--navy-soft);color:var(--navy)}
+
+/* Run bar */
+.runbar{background:var(--bg);border-bottom:1px solid var(--line);z-index:5}
+.runbar .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding-top:12px;padding-bottom:12px}
+.field{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
+.field input[type=date]{height:32px;border:1px solid var(--line-2);border-radius:8px;padding:0 8px;background:var(--bg)}
+.runbar .spacer{flex:1}
+.signoff{position:relative}
+.signoff summary{list-style:none}
+.signoff summary::-webkit-details-marker{display:none}
+.pop{position:absolute;right:0;top:40px;width:280px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:10px;z-index:10;box-shadow:0 8px 24px rgba(29,36,48,.08)}
+.pop label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-2);font-weight:500}
+.pop input{height:32px;border:1px solid var(--line-2);border-radius:8px;padding:0 8px;font-size:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--line-2);background:var(--bg);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#fff}
+.btn.primary:hover{background:#E07128;border-color:#E07128}
+.btn.ghost{border-color:transparent;background:none;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--surface)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+.btn.done{border-color:var(--navy);color:var(--navy)}
+
+main{padding:40px 0 80px}
+section{margin-top:56px}
+section:first-child{margin-top:0}
+h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--navy);margin:0 0 4px}
+.sub{color:var(--ink-2);margin:0 0 20px;font-size:14px;max-width:640px}
+
+/* Headline */
+.question{font-size:14px;color:var(--ink-3);margin:0 0 8px}
+.headline{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 32px}
+.headline h1{margin:0;font-size:40px;line-height:1.1;letter-spacing:-.025em;color:var(--navy);font-weight:700}
+.headline h1 .sep{color:var(--line-2);font-weight:400;margin:0 6px}
+.headline h1 small{font-size:.7em;color:var(--ink-2);font-weight:600}
+.dates{font-size:13px;color:var(--ink-2);text-align:right;line-height:1.7}
+.dates b{color:var(--ink);font-weight:600}
+.callouts{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.callout{font-size:13px;padding:6px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--line);color:var(--ink-2)}
+.callout b{color:var(--ink)}
+.callout.you{background:var(--orange-soft);border-color:#F6CBA9;color:var(--orange-ink)}
+.callout.you b{color:var(--orange-ink)}
+
+/* Mapper */
+.mapper{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:20px;margin-bottom:32px}
+.mapper h3{margin:0 0 4px;font-size:15px}
+.mapper p{margin:0 0 16px;font-size:13px;color:var(--ink-2)}
+.mapgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px 16px}
+.mapgrid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-2);font-weight:500}
+.mapgrid label .req{color:var(--orange-ink)}
+.mapgrid select{height:32px;border:1px solid var(--line-2);border-radius:8px;background:var(--bg);padding:0 6px;font-size:13px}
+.mapper .actions{display:flex;gap:8px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.err{color:#9B2C1F;font-size:13px}
+
+/* Aging */
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink-2);margin-bottom:12px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.aging{width:100%;border-collapse:collapse;font-size:13px}
+.aging th{font-weight:500;color:var(--ink-3);text-align:right;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.aging th:first-child,.aging td:first-child{text-align:left;padding-left:0}
+.aging td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle;white-space:nowrap}
+.aging td.name{white-space:normal;max-width:240px}
+.aging td.name .n{font-weight:500;overflow-wrap:anywhere}
+.aging td.name .meta{display:flex;gap:6px;align-items:center;margin-top:2px;font-size:11px;color:var(--ink-3)}
+.aging td.zero{color:var(--line-2)}
+.aging td.tot{font-weight:600}
+.aging td.barcell{width:180px;padding-right:0}
+.aging tfoot td{border-bottom:none;font-weight:600;color:var(--ink)}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--surface)}
+.bar span{display:block;height:100%}
+.bar span+span{box-shadow:inset 1px 0 0 #fff}
+.tag{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
+.tag.demo{background:var(--orange-soft);color:var(--orange-ink)}
+.tag.you{background:var(--orange);color:#fff}
+.excluded{margin-top:12px;font-size:12px;color:var(--ink-3)}
+
+/* Drafts */
+.status{font-size:12px;color:var(--ink-3);margin:-8px 0 16px;display:flex;align-items:center;gap:8px}
+.status .dot{width:8px;height:8px;border-radius:50%;background:var(--line-2)}
+.status.ok .dot{background:#4C8C6A}
+.status.busy .dot{background:var(--b-1)}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.card{border:1px solid var(--line);border-radius:var(--r);background:var(--bg);display:flex;flex-direction:column;min-width:0}
+.card.you{border-color:#F6CBA9}
+.card .hd{padding:16px 16px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.card .row1{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.card .cname{font-weight:600;font-size:15px;line-height:1.3;overflow-wrap:anywhere}
+.card .facts{font-size:12px;color:var(--ink-2)}
+.tier{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid}
+.tier i{width:8px;height:8px;border-radius:2px}
+.flags{display:flex;flex-direction:column;gap:4px;margin:0;padding:0;list-style:none;font-size:12px;color:var(--ink-2)}
+.flags li::before{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--ink-3);margin:0 8px 2px 0}
+.flags li.tone::before{background:var(--navy)}
+.card .bd{padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
+.addr{font-size:12px;color:var(--ink-3);overflow-wrap:anywhere}
+.addr b{color:var(--ink-2);font-weight:500}
+.card input.subj{width:100%;height:34px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font-weight:600;font-size:13px;background:var(--surface)}
+.card textarea{width:100%;min-height:180px;overflow:hidden;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;line-height:1.55;resize:vertical;background:var(--surface);flex:none}
+.card input.subj:focus,.card textarea:focus{background:var(--bg);border-color:var(--line-2)}
+.card .ft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card .src{margin-left:auto;font-size:11px;color:var(--ink-3)}
+.needs{padding:16px;display:flex;flex-direction:column;gap:8px;flex:1;justify-content:center;background:var(--orange-soft);border-radius:0 0 var(--r) var(--r)}
+.needs b{color:var(--orange-ink);font-size:14px}
+.needs p{margin:0;font-size:13px;color:var(--ink-2)}
+.listed{margin-top:16px;font-size:13px;color:var(--ink-2)}
+
+details.rubric{margin-top:24px;border:1px solid var(--line);border-radius:var(--r)}
+details.rubric summary{cursor:pointer;padding:12px 16px;font-size:13px;font-weight:600;color:var(--navy);list-style:none}
+details.rubric summary::-webkit-details-marker{display:none}
+details.rubric summary::after{content:"+";float:right;color:var(--ink-3)}
+details.rubric[open] summary::after{content:"–"}
+.rub{padding:0 16px 16px;overflow-x:auto}
+.rub table{width:100%;border-collapse:collapse;font-size:12px;min-width:620px}
+.rub th,.rub td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.rub th{color:var(--ink-3);font-weight:500}
+.rub ul{margin:12px 0 0;padding-left:18px;font-size:12px;color:var(--ink-2)}
+.rub ul li{margin:2px 0}
+
+/* Slack */
+.slack{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:16px;display:flex;gap:16px;align-items:flex-start}
+.slack pre{margin:0;flex:1;white-space:pre-wrap;font:13px/1.6 var(--sans);overflow-wrap:anywhere}
+
+/* Script */
+.steps{counter-reset:s;list-style:none;padding:0;margin:0 0 20px;display:grid;gap:8px}
+.steps li{counter-increment:s;display:flex;gap:12px;font-size:14px;color:var(--ink-2)}
+.steps li::before{content:counter(s);flex:none;width:24px;height:24px;border-radius:50%;background:var(--navy-soft);color:var(--navy);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.steps code,.sub code{font:12px var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 4px;color:var(--ink)}
+.code{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.code .bar2{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--surface);font-size:12px;color:var(--ink-2)}
+.code .bar2 .spacer{flex:1}
+.code pre{margin:0;padding:16px;max-height:360px;overflow:auto;font:12px/1.55 var(--mono);color:var(--ink);background:var(--bg)}
+
+footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:12px;color:var(--ink-3)}
+footer p{margin:4px 0;max-width:720px}
+
+.sm{display:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+@media (max-width:760px){
+  .cards{grid-template-columns:1fr}
+}
+@media (max-width:640px){
   .wrap{padding:0 16px}
-  h1{font-size:24px}
-  .steps li b{font-size:12px}
-  .claim .head{flex-wrap:wrap}
-  .claim .seg{margin-left:36px}
-  .detail{margin-left:36px}
-  .two{grid-template-columns:1fr}
-  .fb{grid-template-columns:1fr}
-  .fb .why,.fb .extra{grid-column:1}
-  .fstep{grid-template-columns:96px 1fr 52px}
-  .score .v{font-size:21px}
-  .brand span{display:none}
+  .runbar{position:sticky;top:0}
+  .runbar .wrap{gap:8px}
+  .runbar .spacer{display:none}
+  .runbar .hide-sm{display:none}
+  .lg{display:none}
+  .sm{display:inline}
+  .runbar .wrap{flex-wrap:nowrap;padding-top:8px;padding-bottom:8px}
+  .field input[type=date]{width:120px;padding:0 4px}
+  .runbar .wrap{gap:6px}
+  .runbar .field{gap:6px}
+  .runbar .btn{padding:0 10px}
+  .signoff summary.btn{padding:0 6px}
+  main{padding-top:24px}
+  section{margin-top:40px}
+  .headline h1{font-size:28px}
+  .headline h1 .sep{margin:0 2px}
+  .dates{text-align:left}
+  .aging thead{display:none}
+  .aging td.b{display:none}
+  .aging tr{display:grid;grid-template-columns:1fr auto;gap:6px 12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .aging td{border:none;padding:0}
+  .aging td.barcell{grid-column:1 / -1;width:auto}
+  .aging tfoot tr{border-bottom:none}
+  .slack{flex-direction:column}
+  .built span.long{display:none}
 }
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap">
-  <div class="brand">Expert onboarding <span>· a prototype for Halluminate</span></div>
-  <div class="tabs" role="tablist">
-    <button role="tab" aria-selected="true" data-tab="expert">Expert view</button>
-    <button role="tab" aria-selected="false" data-tab="operator">Operator <span class="int">(internal)</span></button>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#34507A"/><rect x="7" y="17" width="4" height="8" rx="1" fill="#F5F5F5"/><rect x="14" y="12" width="4" height="13" rx="1" fill="#F2B544"/><rect x="21" y="7" width="4" height="18" rx="1" fill="#EE8038"/></svg>
+      AR chaser
+      <span class="pill demo" id="dataPill">Demo data</span>
+    </div>
+    <div class="built">
+      <span class="long">Built for</span> <b>SnapMagic</b>
+    </div>
   </div>
-</div></header>
+</header>
+
+<div class="runbar">
+  <div class="wrap">
+    <label class="field"><span class="lg">Run date</span><input type="date" id="runDate" aria-label="Run date"></label>
+    <span class="field hide-sm" id="nextRun"></span>
+    <span class="spacer"></span>
+    <input type="file" id="file" accept=".csv,text/csv" class="sr">
+    <label for="file" class="btn primary" tabindex="0" id="uploadBtn"><span class="lg">Upload invoice CSV</span><span class="sm">Upload CSV</span></label>
+    <button class="btn" id="demoBtn" type="button"><span class="lg">Use demo data</span><span class="sm">Demo</span></button>
+    <details class="signoff" id="settings">
+      <summary class="btn ghost" aria-label="Sign-off settings">Sign-off</summary>
+      <div class="pop">
+        <label>Sender name<input id="sName"></label>
+        <label>Sender role<input id="sRole"></label>
+        <label>Tier 4 sender (founder)<input id="fName"></label>
+        <label>Founder role<input id="fRole"></label>
+        <button class="btn primary" id="saveSign" type="button">Apply to drafts</button>
+      </div>
+    </details>
+  </div>
+</div>
 
 <main class="wrap">
-  <section class="hero">
-    <div class="eyebrow">Can a new finance expert go from sign-up to ready-to-work without a person walking them through it?</div>
-    <h1>Expert onboarding, sign-up to first task, no human in the loop.</h1>
-    <p class="lede">About ten minutes: a short orientation, one sample review task, instant feedback against an answer key, and a readiness call with a suggested first task type. The operator view shows where people drop off.</p>
+  <div id="mapper"></div>
+
+  <section id="top">
+    <p class="question">Who owes us money this fortnight, and what do I send each of them?</p>
+    <div class="headline">
+      <h1 id="headline" class="num"></h1>
+      <div class="dates" id="dates"></div>
+    </div>
+    <div class="callouts" id="callouts"></div>
   </section>
 
-  <div id="expert">
-    <ol class="steps" id="steps">
-      <li data-step="1">01<b>Orientation</b></li>
-      <li data-step="2">02<b>Sample task</b></li>
-      <li data-step="3">03<b>Feedback</b></li>
-      <li data-step="4">04<b>Readiness</b></li>
+  <section id="agingSec">
+    <h2>Aging by customer</h2>
+    <p class="sub">Open balances by days past due at the run date, sorted by dollars at risk (older money weighs more).</p>
+    <div class="legend" id="legend"></div>
+    <table class="aging num" id="aging"></table>
+    <p class="excluded" id="excluded"></p>
+  </section>
+
+  <section id="drafts">
+    <h2>Chaser drafts</h2>
+    <p class="sub">One email per customer, covering every open invoice. The tier comes from the oldest overdue invoice; tone moves a step with payment history. Edit in place, then copy or open in Gmail.</p>
+    <div class="status" id="draftStatus"><span class="dot"></span><span></span></div>
+    <div class="cards" id="cards"></div>
+    <p class="listed" id="listed"></p>
+    <details class="rubric">
+      <summary>How tiers and modifiers are set</summary>
+      <div class="rub" id="rubric"></div>
+    </details>
+  </section>
+
+  <section id="slackSec">
+    <h2>Slack summary</h2>
+    <p class="sub">Three lines for the CEO.</p>
+    <div class="slack">
+      <pre id="slack"></pre>
+      <button class="btn" type="button" id="copySlack">Copy</button>
+    </div>
+  </section>
+
+  <section id="script">
+    <h2>Make it run itself</h2>
+    <p class="sub">A Google Apps Script with the same aging, rubric and templates as this page (it's the same code). Every 14 days it reads the invoice export in a Sheet, saves one Gmail draft per customer for you to review, and posts the digest to Slack. Nothing sends without you.</p>
+    <ol class="steps">
+      <li><span>Paste the HubSpot or QuickBooks invoice export into a Google Sheet, in a tab named <code>Invoices</code>, headers in row 1.</span></li>
+      <li><span>Open <b>Extensions › Apps Script</b>, replace the contents of <code>Code.gs</code> with the script below, and save.</span></li>
+      <li><span>In <b>Project Settings › Script properties</b>, add <code>SENDER_NAME</code>, <code>SENDER_ROLE</code>, <code>FOUNDER_NAME</code>, <code>FOUNDER_ROLE</code> and a Slack incoming webhook as <code>SLACK_WEBHOOK_URL</code>.</span></li>
+      <li><span>Run <code>setup</code> once and grant access to Sheets, Gmail and external requests. It adds a trigger for every other Monday at 8am.</span></li>
+      <li><span>Run <code>run</code> once to check: drafts land in Gmail, the digest posts to Slack, and an <code>AR runs</code> tab logs the totals.</span></li>
     </ol>
-
-    <section class="panel" data-panel="1">
-      <h2>What you'd be doing</h2>
-      <p>Halluminate builds training environments and benchmarks for AI agents doing finance work. Experts write realistic tasks, the kind an analyst does on a live deal, and review how models answer them. The aim is to find exactly where a model's reasoning breaks so it can be trained to do better.</p>
-      <p class="muted">The review is the core skill. A good reviewer:</p>
-      <ol class="list">
-        <li>Checks every figure against the source, not against what looks plausible.</li>
-        <li>Names the kind of error, not just that something is off. "Wrong add-back" is useful to a trainer; "this seems wrong" isn't.</li>
-        <li>Follows an early mistake through to every number it moves, and to the conclusion.</li>
-        <li>Leaves correct work alone. Flagging sound claims costs everyone time.</li>
-      </ol>
-      <p class="muted">Next you'll review one model answer to a diligence question. Mark each claim as sound or wrong, then say whether you'd sign it off. Feedback is instant.</p>
-      <div class="row"><button class="btn" data-go="2">Start the sample task →</button></div>
-    </section>
-
-    <section class="panel" data-panel="2" hidden>
-      <div class="note"><b>Illustrative task.</b> I wrote this from public descriptions of Westworld Finance Diligence Bench. It isn't a Halluminate task, and the company and every number are fictional. It's graded against an answer key I wrote, not by a model.</div>
-      <h2 id="task-title"></h2>
-      <p class="muted" id="task-brief"></p>
-      <h3>Data pack</h3>
-      <table class="pack" id="pack"></table>
-      <h3>Question put to the model</h3>
-      <p class="q" id="task-q"></p>
-      <h3>The model's answer, claim by claim</h3>
-      <p class="faint" style="font-size:13.5px">Mark each claim. If it's wrong, pick the error type, and for figures give the right number if you can work it out.</p>
-      <div id="claims"></div>
-      <div class="signoff">
-        <span id="signoff-q" style="font-weight:500"></span>
-        <div class="seg" id="signoff">
-          <button data-v="yes" class="ok" aria-pressed="false">Yes</button>
-          <button data-v="no" class="bad" aria-pressed="false">No</button>
-        </div>
-      </div>
-      <div class="row">
-        <button class="btn" id="submit" disabled>Submit review</button>
-        <span class="faint" id="submit-hint" style="font-size:13px">Answer the sign-off question to submit.</span>
-      </div>
-    </section>
-
-    <section class="panel" data-panel="3" hidden>
-      <h2>Feedback on your review</h2>
-      <p class="muted" id="fb-summary"></p>
-      <div class="score" id="fb-score"></div>
-      <div id="fb-items"></div>
-      <div class="row"><button class="btn" data-go="4">See your readiness summary →</button></div>
-    </section>
-
-    <section class="panel" data-panel="4" hidden>
-      <div class="eyebrow">Readiness</div>
-      <div class="verdict" id="rd-verdict"></div>
-      <p class="muted" id="rd-sub"></p>
-      <div class="two">
-        <div><h3 style="margin-top:0">Strengths</h3><div id="rd-strengths"></div></div>
-        <div><h3 style="margin-top:0">Gaps</h3><div id="rd-gaps"></div></div>
-      </div>
-      <h3>Suggested first task type</h3>
-      <p id="rd-first"></p>
-      <h3>Record sent to the operator queue</h3>
-      <pre class="record" id="rd-record"></pre>
-      <div class="row">
-        <button class="btn ghost" id="copy">Copy record</button>
-        <button class="btn ghost" id="restart">Start again</button>
-        <button class="btn ghost" data-tab-go="operator">Operator view →</button>
-      </div>
-    </section>
-  </div>
-
-  <div id="gate" hidden>
-    <section class="panel">
-      <div class="eyebrow">Internal</div>
-      <h2 style="margin-top:6px">Operator view</h2>
-      <p>This is the view your ops team would see: the onboarding funnel, where experts drop out, and which parts of the sample task they miss. In production it sits behind company sign-in. Here it's open, on demo data.</p>
-      <p class="note" id="gate-spoiler"><b>Heads up if you're taking the sample task:</b> this view shows which claims are wrong. Do the review first.</p>
-      <div class="row">
-        <button class="btn" id="gate-continue">Continue as demo operator →</button>
-        <button class="btn ghost" data-tab-go="expert">Back to expert view</button>
-      </div>
-    </section>
-  </div>
-
-  <div id="operator" hidden>
-    <section class="panel">
-      <div class="note demo"><b>Demo data.</b> The funnel and miss rates below are made up to show what the operator view does. None of it is a real Halluminate number. The grader checks at the bottom are real: they run in your browser now.</div>
-
-      <h2>Funnel, last 30 days</h2>
-      <p class="muted">Where experts drop out between being sourced and being ready to work. "Ready" counts both first-attempt passes and those who passed after calibration. The biggest drop is the step to fix first.</p>
-      <div class="funnel" id="funnel"></div>
-
-      <h2>Outcomes of submitted reviews</h2>
-      <table class="t" id="outcomes"></table>
-
-      <h2>What reviewers miss most</h2>
-      <p class="muted">Per claim in the sample task. A high miss rate on one item means the orientation should teach it, or the item is unclear.</p>
-      <table class="t" id="misses"></table>
-
-      <h2>Grader checks</h2>
-      <p class="muted">Three deliberately strong, average and weak reviews, run through the same grader you just used. Feedback has to be right on all three before this ships, so CI runs these on every push.</p>
-      <table class="t" id="checks"></table>
-    </section>
-  </div>
+    <div class="code">
+      <div class="bar2"><span>Code.gs</span><span id="scriptSize"></span><span class="spacer"></span><button class="btn" type="button" id="dlScript">Download</button><button class="btn primary" type="button" id="copyScript">Copy script</button></div>
+      <pre id="scriptCode">Loading…</pre>
+    </div>
+  </section>
 </main>
 
-<footer><div class="wrap">
-  Built by Jake Makking-Robinson as a prototype for Halluminate. The sample task, rubric and answer key are mine; the operator figures are demo data. Source: <a href="https://github.com/jakem-r/halluminate-partnership-intel">GitHub</a>.
-</div></footer>
+<footer>
+  <div class="wrap">
+    <p>Prototype by Jake Makking-Robinson for SnapMagic's finance operations remit ("run aging reports every two weeks"). Demo customers, people and figures are fictional.</p>
+    <p>Parsing and aging run in your browser. When Claude drafting is on, only a per-customer summary (name, balances, days overdue, invoice list, late history) is sent; no emails or raw rows. Nothing is stored. Drafts that break a rule fall back to fixed templates.</p>
+  </div>
+</footer>
 
-<script src="task.js"></script>
-<script src="grader.js"></script>
-<script src="test-answers.js"></script>
+<script src="ar.js"></script>
+<script src="demo.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

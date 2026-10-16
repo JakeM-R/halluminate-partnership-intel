@@ -1,0 +1,15 @@
+name = "snapmagic-ar-chaser"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ALLOWED_ORIGINS = "https://jakem-r.github.io,http://localhost:8000"
+
+# Optional hard daily cap. Create with: npx wrangler kv namespace create RATE
+# then paste the id below and uncomment.
+# [[kv_namespaces]]
+# binding = "RATE"
+# id = "<kv namespace id>"
+
+# Secret, set with: npx wrangler secret put ANTHROPIC_API_KEY

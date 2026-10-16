@@ -1,261 +1,353 @@
+/* AR chaser UI. All parsing and aging happens here in the browser via ar.js. */
 (function () {
-  const TASK = window.HALLU_TASK;
-  const { grade } = window.HALLU_GRADER;
-  const TESTS = window.HALLU_TEST_ANSWERS;
-  const $ = (s, el = document) => el.querySelector(s);
-  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
-  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const pct = (x) => Math.round(x * 100) + "%";
-  const fig = (v, unit) => unit === "£m" ? `£${(+v).toFixed(1)}m` : `${(+v).toFixed(1)}${unit}`;
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var DAY = 86400000;
+  var WORKER_URL = (document.querySelector('meta[name="worker-url"]') || {}).content || "";
 
-  const state = { claims: {}, signoff: null, result: null, step: 1 };
-  const TIER = {
-    ready: { label: "Ready for live tasks", sub: "Caught the errors that matter, including the covenant breach, without over-flagging. Route straight to a first live task." },
-    calibrate: { label: "Ready after one calibration task", sub: "The instincts are there but some errors got through. One more graded task in the gap area, then live work." },
-    "not-yet": { label: "Not ready yet", sub: "Key errors got through, or the answer was signed off. Repeat with a guided walkthrough before any live work." },
+  var BUCKET_VARS = { current: "--b-current", b1: "--b-1", b31: "--b-31", b61: "--b-61", b90: "--b-90" };
+  var TIER_COLORS = ["#6B7A90", "#8A6510", "#B85A1C", "#9A4422", "#34507A", "#34507A"];
+
+  var state = {
+    source: "demo", fileName: "", rows: [], headers: [], map: {},
+    runDate: todayUTC(), settings: Object.assign({}, AR.DEFAULT_SETTINGS),
+    result: null, drafts: {}, dirty: {}, draftMode: "template", runId: 0
   };
 
-  // ---------- tabs and steps ----------
-  // The operator view sits behind a click-through gate: in production it would be
-  // behind company sign-in, and its miss-rate table gives away the answer key.
-  // #operator skips the gate so a reviewer can be linked straight to it.
-  let unlocked = false;
-  try { unlocked = sessionStorage.getItem("hallu-operator") === "1"; } catch (e) {}
-  function unlock() {
-    unlocked = true;
-    try { sessionStorage.setItem("hallu-operator", "1"); } catch (e) {}
+  function todayUTC() { var d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function money(n) { return AR.fmtMoney(Math.round(n)); }
+  function isDemo() { return state.source === "demo"; }
+
+  // ---------- Data loading ----------
+
+  function loadDemo() {
+    var p = AR.parseCSV(DEMO.csv(todayUTC()));
+    state.source = "demo"; state.fileName = "";
+    state.headers = p.headers; state.rows = p.rows; state.map = AR.autoMap(p.headers);
+    $("mapper").innerHTML = "";
+    runAnalysis();
   }
 
-  function showTab(name) {
-    $$(".tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
-    const op = name === "operator";
-    $("#expert").hidden = op;
-    $("#gate").hidden = !op || unlocked;
-    $("#operator").hidden = !op || !unlocked;
-    if (op && !unlocked) $("#gate-spoiler").hidden = !!state.result;
-    if (op && unlocked) renderOperator();
-    history.replaceState(null, "", op && unlocked ? "#operator" : location.pathname + location.search);
-    window.scrollTo({ top: 0 });
-  }
-  $$(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
-  document.addEventListener("click", (e) => {
-    const go = e.target.closest("[data-go]");
-    if (go) goStep(+go.dataset.go);
-    const tg = e.target.closest("[data-tab-go]");
-    if (tg) showTab(tg.dataset.tabGo);
-  });
-  $("#gate-continue").addEventListener("click", () => { unlock(); showTab("operator"); });
-  window.addEventListener("hashchange", () => {
-    if (location.hash === "#operator") { unlock(); showTab("operator"); }
-  });
-
-  function goStep(n, scroll = true) {
-    state.step = n;
-    $$("[data-panel]").forEach((p) => (p.hidden = +p.dataset.panel !== n));
-    $$("#steps li").forEach((li) => {
-      const s = +li.dataset.step;
-      li.classList.toggle("on", s === n);
-      li.classList.toggle("done", s < n);
-    });
-    if (scroll) $(".steps").scrollIntoView({ behavior: "smooth", block: "start" });
+  function loadFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var p = AR.parseCSV(reader.result);
+      if (!p.headers.length || !p.rows.length) { showMapperError("That file has no rows."); return; }
+      state.pending = { headers: p.headers, rows: p.rows, name: file.name };
+      renderMapper(p.headers, AR.autoMap(p.headers), file.name, p.rows.length);
+    };
+    reader.readAsText(file);
   }
 
-  // ---------- step 2: task ----------
-  function renderTask() {
-    $("#task-title").textContent = TASK.title;
-    $("#task-brief").textContent = TASK.brief;
-    $("#task-q").textContent = TASK.question;
-    $("#pack").innerHTML = TASK.dataPack.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("");
-    $("#signoff-q").textContent = TASK.signoff.question;
+  function showMapperError(msg) {
+    $("mapper").innerHTML = '<div class="mapper"><p class="err">' + esc(msg) + "</p></div>";
+  }
 
-    const typeOpts = `<option value="">Choose…</option>` + TASK.errorTypes.map((t) => `<option value="${t.id}">${esc(t.label)}</option>`).join("");
-    $("#claims").innerHTML = TASK.claims.map((c, i) => `
-      <div class="claim" data-id="${c.id}">
-        <div class="head">
-          <span class="num">${String(i + 1).padStart(2, "0")}</span>
-          <span class="txt">${esc(c.text)}</span>
-          <div class="seg" role="group" aria-label="Claim ${i + 1}">
-            <button class="ok" data-v="sound" aria-pressed="false">Sound</button>
-            <button class="bad" data-v="wrong" aria-pressed="false">Wrong</button>
-          </div>
-        </div>
-        <div class="detail" hidden>
-          <label>Error type<select data-f="type">${typeOpts}</select></label>
-          ${c.correct ? `<label>Right figure (${esc(c.correct.unit)}), optional<input type="number" step="0.1" inputmode="decimal" data-f="value"></label>` : ""}
-        </div>
-      </div>`).join("");
+  function renderMapper(headers, map, name, n) {
+    var opts = function (sel) {
+      return '<option value="">Not in file</option>' + headers.map(function (h) {
+        return '<option value="' + esc(h) + '"' + (h === sel ? " selected" : "") + ">" + esc(h) + "</option>";
+      }).join("");
+    };
+    $("mapper").innerHTML =
+      '<div class="mapper"><h3>Match columns: ' + esc(name) + "</h3>" +
+      "<p>" + n + " rows. Guessed from the headers; check anything marked required. Amount paid or open balance nets partial payments. Paid date powers the late-history modifier.</p>" +
+      '<div class="mapgrid">' + AR.FIELDS.map(function (f) {
+        return "<label>" + esc(f.label) + (f.required ? ' <span class="req">required</span>' : "") +
+          '<select data-k="' + f.key + '">' + opts(map[f.key]) + "</select></label>";
+      }).join("") + "</div>" +
+      '<div class="actions"><button class="btn primary" id="applyMap" type="button">Run aging</button>' +
+      '<button class="btn ghost" id="cancelMap" type="button">Cancel</button><span class="err" id="mapErr"></span></div></div>';
+    $("applyMap").onclick = function () {
+      var m = {};
+      document.querySelectorAll("#mapper select").forEach(function (s) { if (s.value) m[s.dataset.k] = s.value; });
+      var miss = AR.missingRequired(m);
+      if (miss.length) { $("mapErr").textContent = "Still needed: " + miss.join(", "); return; }
+      state.source = "file"; state.fileName = state.pending.name;
+      state.headers = state.pending.headers; state.rows = state.pending.rows; state.map = m;
+      $("mapper").innerHTML = "";
+      runAnalysis();
+    };
+    $("cancelMap").onclick = function () { $("mapper").innerHTML = ""; };
+    $("mapper").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
-    $$("#claims .claim").forEach((el) => {
-      const id = el.dataset.id;
-      el.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
-        const wrong = b.dataset.v === "wrong";
-        el.querySelectorAll(".seg button").forEach((x) => x.setAttribute("aria-pressed", x === b));
-        el.querySelector(".detail").hidden = !wrong;
-        state.claims[id] = { ...(state.claims[id] || {}), flag: wrong };
-      }));
-      const sel = el.querySelector("select");
-      sel.addEventListener("change", () => (state.claims[id] = { ...(state.claims[id] || {}), type: sel.value || null }));
-      const num = el.querySelector("input");
-      if (num) num.addEventListener("input", () => {
-        const v = parseFloat(num.value);
-        state.claims[id] = { ...(state.claims[id] || {}), value: isFinite(v) ? v : null };
+  // ---------- Run ----------
+
+  function runAnalysis() {
+    state.result = AR.analyze(state.rows, state.map, state.runDate, state.settings);
+    state.drafts = {}; state.dirty = {}; state.draftMode = "template";
+    state.result.customers.forEach(function (c, i) { c.id = i; state.drafts[i] = AR.templateDraft(c, state.runDate, state.settings); });
+    render();
+    requestModelDrafts();
+  }
+
+  function requestModelDrafts() {
+    var res = state.result;
+    var targets = res.customers.filter(function (c) { return c.action === "chase" || c.action === "billing"; });
+    if (!WORKER_URL) { setStatus("", "Drafts: fixed templates per tier (Claude drafting not configured)"); return; }
+    if (!targets.length) { setStatus("", "Nothing to draft this run"); return; }
+    var runId = ++state.runId;
+    setStatus("busy", "Drafting with Claude… templates shown meanwhile");
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 45000);
+    fetch(WORKER_URL, {
+      method: "POST", headers: { "content-type": "application/json" }, signal: ctrl.signal,
+      body: JSON.stringify({ customers: targets.slice(0, 15).map(function (c) { return AR.modelSummary(c, state.runDate, state.settings); }) })
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (data) {
+      clearTimeout(timer);
+      if (runId !== state.runId) return;
+      var used = 0, rejected = 0;
+      (data.drafts || []).forEach(function (d) {
+        var c = targets[d.index];
+        if (!c || state.dirty[c.id]) return;
+        var chosen = AR.chooseDraft(d, c, state.runDate, state.settings);
+        if (chosen.source === "claude") used++; else rejected++;
+        state.drafts[c.id] = chosen;
       });
+      state.draftMode = "claude";
+      renderCards();
+      setStatus("ok", "Drafted by Claude: " + used + (rejected ? " · " + rejected + " fell back to template after failing a rule check" : "") + ". Every draft is checked against the rules before it's shown.");
+    }).catch(function () {
+      clearTimeout(timer);
+      if (runId !== state.runId) return;
+      setStatus("", "Claude unavailable right now, so these are the fixed templates per tier");
     });
-
-    $$("#signoff button").forEach((b) => b.addEventListener("click", () => {
-      $$("#signoff button").forEach((x) => x.setAttribute("aria-pressed", x === b));
-      state.signoff = b.dataset.v;
-      $("#submit").disabled = false;
-      $("#submit-hint").textContent = unmarkedCount() ? `${unmarkedCount()} claim(s) unmarked will count as sound.` : "";
-    }));
-    $("#claims").addEventListener("click", () => {
-      if (state.signoff) $("#submit-hint").textContent = unmarkedCount() ? `${unmarkedCount()} claim(s) unmarked will count as sound.` : "";
-    });
-    $("#submit").addEventListener("click", submit);
-  }
-  const unmarkedCount = () => TASK.claims.filter((c) => !(c.id in state.claims) || state.claims[c.id].flag === undefined).length;
-
-  function submit() {
-    state.result = grade(TASK, { claims: state.claims, signoff: state.signoff });
-    try { localStorage.setItem("hallu-onboard-last", JSON.stringify({ tier: state.result.tier, score: state.result.score, at: Date.now() })); } catch (e) {}
-    renderFeedback();
-    renderReadiness();
-    goStep(3);
   }
 
-  // ---------- step 3: feedback ----------
-  function renderFeedback() {
-    const r = state.result;
-    const crit = r.criticalCaught ? "including the covenant breach" : "but not the covenant breach, which is the error that matters most";
-    const ff = r.falseFlags ? ` You flagged ${r.falseFlags} sound claim${r.falseFlags > 1 ? "s" : ""}.` : " No sound claims flagged.";
-    const so = r.signoffOk ? " You were right not to sign it off." : ` You'd sign it off, but it shouldn't go out: ${TASK.signoff.why}`;
-    $("#fb-summary").textContent = `You caught ${r.caught} of ${r.totalErrors} errors, ${crit}.${ff}${so}`;
-    $("#fb-score").innerHTML = `
-      <div><div class="v">${r.caught}/${r.totalErrors}</div><div class="l">errors caught</div></div>
-      <div><div class="v">${pct(r.score)}</div><div class="l">weighted score</div></div>
-      <div><div class="v">${r.falseFlags}</div><div class="l">false flags</div></div>`;
+  function setStatus(cls, text) {
+    var el = $("draftStatus");
+    el.className = "status " + cls;
+    el.lastElementChild.textContent = text;
+  }
 
-    const TAG = {
-      caught: ["caught", "Caught"], "caught-mistyped": ["partial", "Caught, mislabelled"],
-      missed: ["missed", "Missed"], "false-flag": ["false", "False flag"], agreed: ["agreed", "Sound, agreed"],
-    };
-    const order = { missed: 0, "false-flag": 1, "caught-mistyped": 2, caught: 3, agreed: 4 };
-    const items = [...r.items].sort((a, b) => order[a.outcome] - order[b.outcome] || (b.severity || 0) - (a.severity || 0));
-    $("#fb-items").innerHTML = items.map((i) => {
-      const [cls, label] = TAG[i.outcome];
-      const extras = [];
-      if (i.outcome === "caught-mistyped") extras.push(`You called it "${esc(i.typeGiven)}". Better described as: ${esc(i.typeExpected.join(" or "))}.`);
-      if (i.figure === "right") extras.push(`Your figure, ${fig(i.figureGiven, i.correct.unit)}, is right.`);
-      if (i.figure === "wrong") extras.push(`Your figure, ${fig(i.figureGiven, i.correct.unit)}, is off: it should be ${fig(i.correct.value, i.correct.unit)}.`);
-      if (i.outcome === "missed" && i.severity === 3) extras.push("Critical: this is the conclusion the reader acts on.");
-      if (i.outcome === "false-flag") extras.push("Flagging sound work sends a trainer chasing a problem that isn't there.");
-      return `<div class="fb">
-        <span class="tag ${cls}">${label}</span>
-        <span class="claimtxt">${esc(i.text)}</span>
-        <span class="why">${esc(i.note)}</span>
-        ${extras.length ? `<span class="extra">${extras.join(" ")}</span>` : ""}
-      </div>`;
+  // ---------- Render ----------
+
+  function render() {
+    var res = state.result;
+    var pill = $("dataPill");
+    pill.className = "pill " + (isDemo() ? "demo" : "file");
+    pill.textContent = isDemo() ? "Demo data" : state.fileName;
+    pill.title = isDemo() ? "Fictional customers and figures" : "Your file, processed in this browser";
+
+    $("runDate").value = AR.isoDate(state.runDate);
+    $("nextRun").textContent = "Next run " + AR.fmtDate(res.nextRun);
+
+    var n = res.toChase;
+    $("headline").innerHTML = n + " customer" + (n === 1 ? "" : "s") + " to chase" +
+      '<span class="sep">·</span><small>' + AR.fmtK(res.totalAR) + " outstanding</small>" +
+      '<span class="sep">·</span><small>' + AR.fmtK(res.over30) + " over 30 days</small>";
+    $("dates").innerHTML = "Run <b>" + esc(AR.fmtDate(res.runDate)) + "</b><br>Next run <b>" + esc(AR.fmtDate(res.nextRun)) + "</b>";
+
+    var needs = res.customers.filter(function (c) { return c.needsYou; });
+    var chase = res.customers.filter(function (c) { return c.action === "chase"; }).length;
+    var billing = res.customers.filter(function (c) { return c.action === "billing"; }).length;
+    var co = [];
+    if (needs.length) co.push('<span class="callout you"><b>' + needs.length + " need you</b>: " + needs.map(function (c) { return esc(c.name); }).join(", ") + "</span>");
+    co.push('<span class="callout"><b>' + chase + "</b> chaser draft" + (chase === 1 ? "" : "s") + " ready</span>");
+    if (billing) co.push('<span class="callout"><b>' + billing + "</b> billing repl" + (billing === 1 ? "y" : "ies") + "</span>");
+    if (res.excludedTotal) co.push('<span class="callout"><b>' + res.excludedTotal + "</b> rows excluded</span>");
+    $("callouts").innerHTML = co.join("");
+
+    renderAging();
+    renderCards();
+    renderRubric();
+    $("slack").textContent = slackText();
+  }
+
+  function slackText() {
+    // ar.js escapes for Slack's API; the copy button wants plain text.
+    return AR.slackDigest(state.result).replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  }
+
+  function renderAging() {
+    var res = state.result;
+    $("legend").innerHTML = AR.BUCKETS.map(function (b) {
+      return '<span><i style="background:var(' + BUCKET_VARS[b.key] + ')"></i>' + b.label + (b.key === "current" ? "" : " days") + "</span>";
     }).join("");
+    var head = "<thead><tr><th>Customer</th>" + AR.BUCKETS.map(function (b) { return "<th>" + b.label + "</th>"; }).join("") + "<th>Total</th><th></th></tr></thead>";
+    var max = Math.max.apply(null, res.customers.map(function (c) { return c.balance; }).concat([1]));
+    var body = res.customers.map(function (c) {
+      var bar = AR.BUCKETS.map(function (b) {
+        var v = c.buckets[b.key];
+        return v ? '<span style="width:' + (v / max * 100).toFixed(2) + "%;background:var(" + BUCKET_VARS[b.key] + ')" title="' + b.label + ": " + money(v) + '"></span>' : "";
+      }).join("");
+      var meta = [];
+      if (isDemo()) meta.push('<span class="tag demo">Demo</span>');
+      if (c.needsYou) meta.push('<span class="tag you">Needs you</span>');
+      meta.push("<span>" + (c.tier ? "Tier " + c.tier + " · oldest " + c.oldestDays + "d" : "Not yet due") + "</span>");
+      return "<tr><td class=\"name\"><div class=\"n\">" + esc(c.name) + '</div><div class="meta">' + meta.join("") + "</div></td>" +
+        AR.BUCKETS.map(function (b) { var v = c.buckets[b.key]; return '<td class="b' + (v ? "" : " zero") + '">' + (v ? money(v) : "–") + "</td>"; }).join("") +
+        '<td class="tot">' + money(c.balance) + '</td><td class="barcell"><div class="bar" role="img" aria-label="' + esc(c.name) + " aging split\">" + bar + "</div></td></tr>";
+    }).join("");
+    var tot = { current: 0, b1: 0, b31: 0, b61: 0, b90: 0 };
+    res.customers.forEach(function (c) { Object.keys(tot).forEach(function (k) { tot[k] += c.buckets[k]; }); });
+    var foot = "<tfoot><tr><td>Total</td>" + AR.BUCKETS.map(function (b) { return '<td class="b">' + money(tot[b.key]) + "</td>"; }).join("") +
+      '<td class="tot">' + money(res.totalAR) + "</td><td></td></tr></tfoot>";
+    $("aging").innerHTML = head + "<tbody>" + body + "</tbody>" + foot;
+
+    var ex = res.excluded, parts = [];
+    if (ex.paid) parts.push(ex.paid + " paid or void");
+    if (ex.nonPositive) parts.push(ex.nonPositive + " zero or negative balance (incl. credit notes)");
+    if (ex.noDueDate) parts.push(ex.noDueDate + " missing a due date");
+    if (ex.duplicate) parts.push(ex.duplicate + " duplicate invoice #");
+    if (ex.unreadable) parts.push(ex.unreadable + " unreadable");
+    $("excluded").textContent = res.excludedTotal
+      ? "Excluded " + res.excludedTotal + " of " + state.rows.length + " rows: " + parts.join(", ") + "."
+      : "No rows excluded (" + state.rows.length + " rows).";
   }
 
-  // ---------- step 4: readiness ----------
-  function renderReadiness() {
-    const r = state.result;
-    const t = TIER[r.tier];
-    const v = $("#rd-verdict");
-    v.textContent = t.label;
-    v.className = "verdict " + r.tier;
-    $("#rd-sub").textContent = t.sub;
-
-    const areaRow = (a) => `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:14px"><span>${esc(a.label)}</span><span class="mono faint">${pct(a.pct)}</span></div><div class="bar"><i style="width:${Math.round(a.pct * 100)}%"></i></div></div>`;
-    $("#rd-strengths").innerHTML = r.strengths.length ? r.strengths.map(areaRow).join("") : `<p class="faint">None clear yet.</p>`;
-    $("#rd-gaps").innerHTML = r.gaps.length ? r.gaps.map(areaRow).join("") : `<p class="faint">No gaps on this task.</p>`;
-
-    $("#rd-first").innerHTML = r.firstTask
-      ? `${esc(r.firstTask)}.${r.tier === "calibrate" && r.gaps.length ? ` <span class="muted">Calibration task first, in: ${esc(r.gaps.map((g) => g.label.toLowerCase()).join(", "))}.</span>` : ""}`
-      : `<span class="muted">None yet. Assign the guided walkthrough, then a second practice task.</span>`;
-
-    const missed = r.items.filter((i) => i.outcome === "missed").map((i) => i.id);
-    const record = {
-      expert: "new-applicant",
-      task: TASK.id,
-      tier: r.tier,
-      score: +r.score.toFixed(2),
-      errors_caught: `${r.caught}/${r.totalErrors}`,
-      critical_caught: r.criticalCaught,
-      false_flags: r.falseFlags,
-      missed,
-      strengths: r.strengths.map((a) => a.id),
-      gaps: r.gaps.map((a) => a.id),
-      first_task: r.firstTask,
-      next_step: { ready: "assign_first_live_task", calibrate: "assign_calibration_task", "not-yet": "assign_walkthrough" }[r.tier],
-    };
-    $("#rd-record").textContent = JSON.stringify(record, null, 2);
+  function tierBadge(c) {
+    var label = c.action === "billing" ? "Billing question" : AR.TIER_NAMES[c.tier];
+    var col = TIER_COLORS[c.tier];
+    return '<span class="tier" style="color:' + col + ";border-color:" + col + '55"><i style="background:' + col + '"></i>Tier ' + c.tier + " · " + esc(label) + "</span>";
   }
 
-  $("#copy").addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText($("#rd-record").textContent); $("#copy").textContent = "Copied"; }
-    catch (e) { $("#copy").textContent = "Copy failed"; }
-    setTimeout(() => ($("#copy").textContent = "Copy record"), 1500);
-  });
-  $("#restart").addEventListener("click", () => {
-    state.claims = {}; state.signoff = null; state.result = null;
-    renderTask();
-    $("#submit").disabled = true;
-    $("#submit-hint").textContent = "Answer the sign-off question to submit.";
-    goStep(1);
-  });
-
-  // ---------- operator view ----------
-  // DEMO DATA: illustrative only, not Halluminate figures.
-  const DEMO = {
-    funnel: [
-      ["Sourced", 400], ["Started orientation", 248], ["Submitted sample task", 163], ["Ready for live work", 141],
-    ],
-    outcomes: { ready: 97, calibrate: 44, "not-yet": 22 },
-    missRate: { c4: 0.12, c5: 0.41, c6: 0.15, c7: 0.28, c8: 0.19, c10: 0.46 },
-    falseFlagRate: { c1: 0.06, c2: 0.01, c3: 0.09, c9: 0.04 },
-  };
-
-  function renderOperator() {
-    const top = DEMO.funnel[0][1];
-    let worst = { i: -1, d: 0 };
-    DEMO.funnel.forEach(([, n], i) => {
-      if (i === 0) return;
-      const d = 1 - n / DEMO.funnel[i - 1][1];
-      if (d > worst.d) worst = { i, d };
-    });
-    $("#funnel").innerHTML = DEMO.funnel.map(([name, n], i) => {
-      const prev = i ? DEMO.funnel[i - 1][1] : null;
-      const drop = prev ? `<div class="drop" style="${i === worst.i ? "font-weight:600" : "color:var(--ink-3)"}">−${pct(1 - n / prev)} from previous step${i === worst.i ? " · biggest drop" : ""}</div>` : "";
-      return `<div class="fstep"><span class="name">${esc(name)}</span><span class="track"><i style="width:${(n / top) * 100}%"></i></span><span class="n">${n}</span>${drop}</div>`;
+  function renderCards() {
+    var res = state.result;
+    var shown = res.customers.filter(function (c) { return c.tier >= 1; });
+    shown.sort(function (a, b) { return (b.needsYou - a.needsYou) || (b.tier - a.tier) || (b.balance - a.balance); });
+    $("cards").innerHTML = shown.map(function (c) {
+      var d = state.drafts[c.id];
+      var facts = money(c.balance) + " open · " + c.invoices.length + " invoice" + (c.invoices.length === 1 ? "" : "s") + " · oldest " + c.oldestDays + " days overdue";
+      var flags = c.flags.map(function (f) { return "<li>" + esc(f) + "</li>"; });
+      if (c.toneNote && c.action === "chase") flags.push('<li class="tone">' + esc(c.toneNote) + "</li>");
+      if (d.rejected) flags.push("<li>Claude draft failed a rule check (" + esc(d.rejected[0]) + "), template used</li>");
+      var hd = '<div class="hd"><div class="row1"><div><div class="cname">' + esc(c.name) + "</div>" +
+        '<div class="facts num">' + facts + "</div></div>" +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">' + tierBadge(c) +
+        (c.needsYou ? '<span class="tag you">Needs you</span>' : "") + (isDemo() ? '<span class="tag demo">Demo</span>' : "") + "</div></div>" +
+        (flags.length ? '<ul class="flags">' + flags.join("") + "</ul>" : "") + "</div>";
+      var bd;
+      if (!d.body) {
+        var why = c.tier === 5 ? "Over 90 days. This needs a call from you, not another email."
+          : !c.email ? "No contact email in the export. Fix the record and re-run."
+          : "Check this account before anything goes out.";
+        bd = '<div class="needs"><b>Needs you</b><p>' + esc(why) + "</p></div>";
+      } else {
+        bd = '<div class="bd"><div class="addr"><b>To</b> ' + esc(d.to) + (d.cc ? " · <b>Cc</b> " + esc(d.cc) : "") +
+          (c.tier === 4 ? " · <b>Send from founder</b>" : "") + "</div>" +
+          '<input class="subj" data-id="' + c.id + '" aria-label="Subject" value="' + esc(d.subject) + '">' +
+          '<textarea data-id="' + c.id + '" aria-label="Email body" spellcheck="true">' + esc(d.body) + "</textarea>" +
+          '<div class="ft"><button class="btn primary" type="button" data-copy="' + c.id + '">Copy</button>' +
+          '<a class="btn" target="_blank" rel="noopener" data-gmail="' + c.id + '" href="' + gmailUrl(d) + '">Open in Gmail</a>' +
+          '<span class="src">' + (d.source === "claude" ? "Drafted by Claude" : "Template") + (state.dirty[c.id] ? " · edited" : "") + "</span></div></div>";
+      }
+      return '<article class="card' + (c.needsYou ? " you" : "") + '">' + hd + bd + "</article>";
     }).join("");
 
-    const tot = Object.values(DEMO.outcomes).reduce((a, b) => a + b, 0);
-    $("#outcomes").innerHTML = `<tr><th>Outcome</th><th>Next step, automatic</th><th class="num">Experts</th><th class="num">Share</th></tr>` +
-      Object.entries(DEMO.outcomes).map(([k, n]) => `<tr><td>${TIER[k].label}</td><td class="muted">${{ ready: "Assigned first live task", calibrate: "Calibration task in gap area", "not-yet": "Guided walkthrough, then retry" }[k]}</td><td class="num">${n}</td><td class="num">${pct(n / tot)}</td></tr>`).join("");
+    document.querySelectorAll("#cards textarea").forEach(fit);
 
-    const rows = TASK.claims.map((c, i) => {
-      const isErr = !!c.error;
-      const rate = isErr ? DEMO.missRate[c.id] : DEMO.falseFlagRate[c.id];
-      return { n: i + 1, c, isErr, rate };
-    }).sort((a, b) => b.rate - a.rate);
-    $("#misses").innerHTML = `<tr><th>#</th><th>Claim</th><th>Measure</th><th class="num">Rate</th></tr>` +
-      rows.map((r) => `<tr><td class="mono faint">${String(r.n).padStart(2, "0")}</td><td>${esc(r.c.text)}</td><td class="muted" style="white-space:nowrap">${r.isErr ? "missed" : "false flag"}</td><td class="num">${pct(r.rate)}</td></tr>`).join("");
-
-    const checks = Object.values(TESTS).map((t) => {
-      const r = grade(TASK, t.response);
-      const ok = r.tier === t.expect.tier
-        && (t.expect.minScore == null || r.score >= t.expect.minScore)
-        && (t.expect.maxScore == null || r.score <= t.expect.maxScore);
-      return `<tr><td>${esc(t.label)}</td><td>${TIER[t.expect.tier].label}</td><td>${TIER[r.tier].label}</td><td class="num">${pct(r.score)}</td><td class="num"><span class="${ok ? "pass" : "fail"}">${ok ? "pass" : "fail"}</span></td></tr>`;
-    });
-    let you = "";
-    if (state.result) you = `<tr><td><b>Your review</b></td><td class="faint">n/a</td><td>${TIER[state.result.tier].label}</td><td class="num">${pct(state.result.score)}</td><td></td></tr>`;
-    $("#checks").innerHTML = `<tr><th>Test review</th><th>Expected</th><th>Grader says</th><th class="num">Score</th><th class="num">Check</th></tr>` + checks.join("") + you;
+    var listed = res.customers.filter(function (c) { return c.tier === 0; });
+    $("listed").innerHTML = listed.length
+      ? "<b>Not yet due, no action:</b> " + listed.map(function (c) { return esc(c.name) + " (" + money(c.balance) + ")"; }).join(", ")
+      : "";
   }
 
-  renderTask();
-  goStep(1, false);
-  if (location.hash === "#operator") { unlock(); showTab("operator"); }
+  function fit(ta) { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + 2 + "px"; }
+
+  function gmailUrl(d) {
+    var q = "view=cm&fs=1&to=" + encodeURIComponent(d.to || "") + (d.cc ? "&cc=" + encodeURIComponent(d.cc) : "") +
+      "&su=" + encodeURIComponent(d.subject) + "&body=" + encodeURIComponent(d.body);
+    return "https://mail.google.com/mail/?" + q;
+  }
+
+  function renderRubric() {
+    if ($("rubric").dataset.done) return;
+    $("rubric").dataset.done = "1";
+    $("rubric").innerHTML = "<table><thead><tr><th>Tier</th><th>Days overdue</th><th>Tone</th><th>Must include</th><th>Ask</th></tr></thead><tbody>" +
+      AR.RUBRIC.map(function (r) {
+        return "<tr><td><b>" + r.tier + "</b></td><td>" + esc(r.days) + "</td><td>" + esc(r.tone) + "</td><td>" + esc(r.include) + "</td><td>" + esc(r.ask) + "</td></tr>";
+      }).join("") + "</tbody></table>" +
+      "<ul><li><b>Disputed:</b> no chaser; a billing-question reply instead.</li>" +
+      "<li><b>Partial payment:</b> thanks them for what arrived and chases only the remainder.</li>" +
+      "<li><b>No late payments in 12 months:</b> tone one step softer. <b>Two or more:</b> one step firmer. Tier stays for routing.</li>" +
+      "<li><b>Over 20% of total AR:</b> flagged “Needs you”, still drafted.</li>" +
+      "<li><b>Missing contact email:</b> no draft, flagged for data cleanup.</li>" +
+      "<li><b>Hard rules:</b> figures only from the export, no legal or collections language, no fees unless the terms state one, under 120 words, no exclamation marks. Claude's drafts are checked against these and replaced by the template if they fail.</li></ul>";
+  }
+
+  // ---------- Copy helpers ----------
+
+  function copy(text, btn) {
+    var done = function () {
+      var t = btn.textContent; btn.textContent = "Copied"; btn.classList.add("done");
+      setTimeout(function () { btn.textContent = t; btn.classList.remove("done"); }, 1400);
+    };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+    function fallback() {
+      var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* leave text selectable */ }
+      ta.remove();
+    }
+  }
+
+  // ---------- Apps Script ----------
+
+  var scriptText = "";
+  function loadScript() {
+    Promise.all([fetch("ar.js").then(function (r) { return r.text(); }), fetch("sheet-runner.js").then(function (r) { return r.text(); })])
+      .then(function (parts) {
+        scriptText = "/* SnapMagic AR chaser: Google Apps Script. Generated from the same core as the web page. */\n\n" + parts[0] + "\n\n" + parts[1];
+        $("scriptCode").textContent = scriptText;
+        $("scriptSize").textContent = "· " + scriptText.split("\n").length + " lines";
+      })
+      .catch(function () { $("scriptCode").textContent = "Couldn't load the script. Serve the page over http(s) rather than file://."; });
+  }
+
+  // ---------- Events ----------
+
+  $("runDate").addEventListener("change", function (e) {
+    var t = AR.parseDate(e.target.value);
+    if (t == null) return;
+    state.runDate = t;
+    runAnalysis();
+  });
+  $("file").addEventListener("change", function (e) { if (e.target.files[0]) loadFile(e.target.files[0]); e.target.value = ""; });
+  $("uploadBtn").addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("file").click(); } });
+  $("demoBtn").addEventListener("click", loadDemo);
+
+  ["sName", "sRole", "fName", "fRole"].forEach(function (id, i) {
+    $(id).value = state.settings[["senderName", "senderRole", "founderName", "founderRole"][i]];
+  });
+  $("saveSign").addEventListener("click", function () {
+    state.settings.senderName = $("sName").value.trim() || AR.DEFAULT_SETTINGS.senderName;
+    state.settings.senderRole = $("sRole").value.trim() || AR.DEFAULT_SETTINGS.senderRole;
+    state.settings.founderName = $("fName").value.trim() || AR.DEFAULT_SETTINGS.founderName;
+    state.settings.founderRole = $("fRole").value.trim() || AR.DEFAULT_SETTINGS.founderRole;
+    $("settings").open = false;
+    runAnalysis();
+  });
+
+  $("cards").addEventListener("input", function (e) {
+    var id = e.target.dataset.id; if (id == null) return;
+    var d = state.drafts[id];
+    if (e.target.tagName === "TEXTAREA") { d.body = e.target.value; fit(e.target); } else d.subject = e.target.value;
+    state.dirty[id] = true;
+    var a = document.querySelector('[data-gmail="' + id + '"]'); if (a) a.href = gmailUrl(d);
+  });
+  $("cards").addEventListener("click", function (e) {
+    var id = e.target.dataset.copy; if (id == null) return;
+    var d = state.drafts[id];
+    copy("Subject: " + d.subject + "\n\n" + d.body, e.target);
+  });
+  $("copySlack").addEventListener("click", function (e) { copy(slackText(), e.target); });
+  $("copyScript").addEventListener("click", function (e) { if (scriptText) copy(scriptText, e.target); });
+  $("dlScript").addEventListener("click", function () {
+    if (!scriptText) return;
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([scriptText], { type: "text/javascript" }));
+    a.download = "Code.gs"; a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  });
+
+  loadDemo();
+  loadScript();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { document.querySelectorAll("#cards textarea").forEach(fit); });
 })();
