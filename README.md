@@ -6,7 +6,7 @@ A working prototype by Jake Makking-Robinson for SnapMagic's finance operations 
 
 1. **A to-do headline:** customers to chase, total outstanding and the amount over 30 days, with the run date and the next run 14 days out.
 2. **Aging by customer:** current, 1–30, 31–60, 61–90 and 90+ buckets, sorted by dollars at risk, with a count of excluded rows (paid, zero or negative balance, missing due date, duplicate invoice #).
-3. **Chaser drafts:** one email per customer covering every open invoice, tiered by the oldest overdue invoice. Each draft can be edited, copied or opened in Gmail. Tier 5, accounts over 20% of AR and records with a missing email are flagged "Needs you."
+3. **Chaser drafts:** one email per customer covering every open invoice, tiered by the oldest overdue invoice. Each draft can be edited, copied or opened in Gmail. Tier 5, accounts over 20% of AR and records with a missing email are flagged "Needs action."
 4. **Slack summary:** a three-line digest for the CEO.
 5. **Make it run itself:** a Google Apps Script that applies the same aging and rubric to a Sheet every other Monday, saves Gmail drafts and posts the digest to Slack. Setup takes five steps.
 

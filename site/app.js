@@ -221,7 +221,7 @@
     var chase = res.customers.filter(function (c) { return c.action === "chase"; }).length;
     var billing = res.customers.filter(function (c) { return c.action === "billing"; }).length;
     var co = [];
-    if (needs.length) co.push('<span class="callout you"><b>' + needs.length + " need you</b>: " + needs.map(function (c) { return esc(c.name); }).join(", ") + "</span>");
+    if (needs.length) co.push('<span class="callout you"><b>' + needs.length + " need action</b>: " + needs.map(function (c) { return esc(c.name); }).join(", ") + "</span>");
     co.push('<span class="callout"><b>' + chase + "</b> chaser draft" + (chase === 1 ? "" : "s") + " ready</span>");
     if (billing) co.push('<span class="callout"><b>' + billing + "</b> billing repl" + (billing === 1 ? "y" : "ies") + "</span>");
     if (res.excludedTotal) co.push('<span class="callout"><b>' + res.excludedTotal + "</b> rows excluded</span>");
@@ -260,7 +260,7 @@
       }).join("");
       var meta = [];
       if (isDemo()) meta.push('<span class="tag demo">Demo</span>');
-      if (c.needsYou) meta.push('<span class="tag you">Needs you</span>');
+      if (c.needsYou) meta.push('<span class="tag you">Needs action</span>');
       meta.push("<span>" + (c.tier ? c.oldestDays + " days overdue" : "Not yet due") + "</span>");
       return "<tr><td class=\"name\"><div class=\"n\">" + esc(c.name) + '</div><div class="meta">' + meta.join("") + "</div></td>" +
         AR.BUCKETS.map(function (b) { var v = c.buckets[b.key]; return '<td class="b' + (v ? "" : " zero") + '">' + (v ? money(v) : "–") + "</td>"; }).join("") +
@@ -269,7 +269,7 @@
     var tot = { current: 0, b1: 0, b31: 0, b61: 0, b90: 0 };
     var shownTotal = 0;
     rows.forEach(function (c) { shownTotal += c.balance; Object.keys(tot).forEach(function (k) { tot[k] += c.buckets[k]; }); });
-    var foot = "<tfoot><tr><td>" + (state.onlyYou.aging ? "Total, needs you" : "Total") + "</td>" + AR.BUCKETS.map(function (b) { return '<td class="b">' + money(tot[b.key]) + "</td>"; }).join("") +
+    var foot = "<tfoot><tr><td>" + (state.onlyYou.aging ? "Total, needs action" : "Total") + "</td>" + AR.BUCKETS.map(function (b) { return '<td class="b">' + money(tot[b.key]) + "</td>"; }).join("") +
       '<td class="tot">' + money(shownTotal) + "</td><td></td></tr></tfoot>";
     $("aging").innerHTML = head + "<tbody>" + body + "</tbody>" + foot;
 
@@ -306,12 +306,12 @@
       var summary = '<summary><div class="sl"><div class="cname">' + esc(c.name) + "</div>" +
         '<div class="facts num">' + (isDemo() ? '<span class="tag demo">Demo</span> ' : "") + facts + "</div>" +
         '<div class="preview">' + esc(preview) + "</div></div>" +
-        '<div class="sr2">' + (c.needsYou ? '<span class="tag you">Needs you</span>' : "") + tierBadge(c) +
+        '<div class="sr2">' + (c.needsYou ? '<span class="tag you">Needs action</span>' : "") + tierBadge(c) +
         '<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></summary>';
       var fl = flags.length ? '<ul class="flags">' + flags.join("") + "</ul>" : "";
       var bd;
       if (!d.body) {
-        bd = '<div class="bd">' + fl + '<div class="needs"><b>Needs you</b><p>' + esc(why) + "</p></div></div>";
+        bd = '<div class="bd">' + fl + '<div class="needs"><b>Needs action</b><p>' + esc(why) + "</p></div></div>";
       } else {
         bd = '<div class="bd">' + fl + '<div class="addr"><b>To</b> ' + esc(d.to) + (d.cc ? " · <b>Cc</b> " + esc(d.cc) : "") +
           (c.tier === 4 ? " · <b>Send from founder</b>" : "") + "</div>" +
@@ -350,7 +350,7 @@
       "<ul><li><b>Disputed:</b> no chaser; a billing-question reply instead.</li>" +
       "<li><b>Partial payment:</b> thanks them for what arrived and chases only the remainder.</li>" +
       "<li><b>No late payments in 12 months:</b> tone one step softer. <b>Two or more:</b> one step firmer. Tier stays for routing.</li>" +
-      "<li><b>Over 20% of total AR:</b> flagged “Needs you”, still drafted.</li>" +
+      "<li><b>Over 20% of total AR:</b> flagged “Needs action”, still drafted.</li>" +
       "<li><b>Missing contact email:</b> no draft, flagged for data cleanup.</li>" +
       "<li><b>Hard rules:</b> figures only from the export, no legal or collections language, no fees unless the terms state one, under 120 words, no exclamation marks. AI drafts are checked against these and replaced by the template if they fail.</li></ul>";
   }

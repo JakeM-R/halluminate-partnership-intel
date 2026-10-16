@@ -178,7 +178,7 @@
     { tier: 2, days: "15–30", tone: "Clear, polite, direct", include: "Amount, days overdue, invoice copy offered", ask: "A payment date by a named day (+3 business days)" },
     { tier: 3, days: "31–60", tone: "Firm, CC AP contact if known", include: "Total balance and invoice list", ask: "Payment or a date within 5 business days, offer to resolve billing issues" },
     { tier: 4, days: "61–90", tone: "Final notice, founder level", include: "Full balance and late history", ask: "A 15-minute call this week to agree a plan" },
-    { tier: 5, days: "90+", tone: "No draft", include: "–", ask: "Flag “Needs you”, call suggested" }
+    { tier: 5, days: "90+", tone: "No draft", include: "–", ask: "Flag “Needs action”, call suggested" }
   ];
 
   var DEFAULT_SETTINGS = {
@@ -488,8 +488,8 @@
     var billing = res.customers.filter(function (c) { return c.action === "billing"; }).length;
     var l1 = "AR run " + fmtShortDate(res.runDate) + ": " + fmtK(res.totalAR) + " outstanding, " + fmtK(res.over30) + " over 30 days, " + res.toChase + " customer" + (res.toChase === 1 ? "" : "s") + " to chase.";
     var l2 = needs.length
-      ? "Needs you: " + needs.slice(0, 4).map(function (c) { return c.name.slice(0, 40) + " (" + fmtK(c.balance) + ", " + c.oldestDays + " days overdue)"; }).join("; ") + (needs.length > 4 ? "; +" + (needs.length - 4) + " more" : "") + "."
-      : "Nothing needs you this run.";
+      ? "Needs action: " + needs.slice(0, 4).map(function (c) { return c.name.slice(0, 40) + " (" + fmtK(c.balance) + ", " + c.oldestDays + " days overdue)"; }).join("; ") + (needs.length > 4 ? "; +" + (needs.length - 4) + " more" : "") + "."
+      : "Nothing needs action this run.";
     var l3 = "Drafts ready: " + drafts + " chaser" + (drafts === 1 ? "" : "s") + (billing ? ", " + billing + " billing repl" + (billing === 1 ? "y" : "ies") : "") + ". Next run " + fmtShortDate(res.nextRun) + ".";
     // Slack treats <, > and & as control characters; customer names are data, not markup.
     return [l1, l2, l3].join("\n").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

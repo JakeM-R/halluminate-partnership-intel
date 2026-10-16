@@ -81,7 +81,7 @@ test("a disputed invoice gets no chaser and a billing reply", () => {
   rulesOk(d, c);
 });
 
-test("a 120-day invoice gets no draft and Needs you", () => {
+test("a 120-day invoice gets no draft and Needs action", () => {
   const res = run([row("INV-2088", "Customer E", "6200", 120)]);
   const c = only(res);
   assert.strictEqual(c.tier, 5);
@@ -168,7 +168,7 @@ test("tone modifiers: clean history softens, two late payments firm, tier is unc
   assert.strictEqual(slow.tier, 2); assert.strictEqual(slow.tone, 3);
 });
 
-test("balance over 20% of AR is flagged Needs you and still drafted; missing email is flagged with no draft", () => {
+test("balance over 20% of AR is flagged Needs action and still drafted; missing email is flagged with no draft", () => {
   const res = run([row("INV-1", "Big", "9000", 5), row("INV-2", "Small", "1000", 5), row("INV-3", "Ghost", "500", 5, { email: "" })]);
   const big = res.customers.find((c) => c.name === "Big");
   assert.strictEqual(big.needsYou, true);

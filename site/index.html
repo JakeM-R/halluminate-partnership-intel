@@ -248,6 +248,9 @@ details.guide>.sub.small{font-size:12px;color:var(--ink-3);margin:12px 0 16px}
   .runbar .field{gap:6px}
   .runbar .btn{padding:0 10px}
   .tabs button{padding:0 10px}
+  .seg button{padding:0 8px}
+  .seg span:first-child{display:none}
+  .seg .divider{margin:0 2px}
   .gtable table{min-width:0}
   .gtable thead{display:none}
   .gtable tr{display:grid;grid-template-columns:1fr auto;gap:4px 8px;padding:10px 0;border-bottom:1px solid var(--line)}
@@ -335,7 +338,7 @@ details.guide>.sub.small{font-size:12px;color:var(--ink-3);margin:12px 0 16px}
   <section id="agingSec">
     <h2>Aging by customer</h2>
     <p class="sub">Each bar is one customer's open balance, split by days past due at the run date.</p>
-    <div class="seg" role="group" aria-label="Sort" data-list="aging"><span>Sort</span><button type="button" data-sort="overdue" aria-pressed="true">Most overdue</button><button type="button" data-sort="amount" aria-pressed="false">Largest amount</button><span class="divider"></span><button type="button" class="you" data-filter="you" aria-pressed="false" title="Show only customers that need you">Needs you</button></div>
+    <div class="seg" role="group" aria-label="Sort" data-list="aging"><span>Sort</span><button type="button" data-sort="overdue" aria-pressed="true">Most overdue</button><button type="button" data-sort="amount" aria-pressed="false">Largest amount</button><span class="divider"></span><button type="button" class="you" data-filter="you" aria-pressed="false" title="Show only customers that need action">Needs action</button></div>
     <div class="legend" id="legend"></div>
     <table class="aging num" id="aging"></table>
     <p class="excluded" id="excluded"></p>
@@ -345,7 +348,7 @@ details.guide>.sub.small{font-size:12px;color:var(--ink-3);margin:12px 0 16px}
     <h2>Chaser drafts</h2>
     <p class="sub">One email per customer, covering every open invoice. The tier comes from the oldest overdue invoice; tone moves a step with payment history. Tap a customer to open the draft, edit it in place, then copy or open in Gmail.</p>
     <div class="status" id="draftStatus"><span class="dot"></span><span></span></div>
-    <div class="seg" role="group" aria-label="Sort" data-list="drafts"><span>Sort</span><button type="button" data-sort="overdue" aria-pressed="true">Most overdue</button><button type="button" data-sort="amount" aria-pressed="false">Largest amount</button><span class="divider"></span><button type="button" class="you" data-filter="you" aria-pressed="false" title="Show only customers that need you">Needs you</button></div>
+    <div class="seg" role="group" aria-label="Sort" data-list="drafts"><span>Sort</span><button type="button" data-sort="overdue" aria-pressed="true">Most overdue</button><button type="button" data-sort="amount" aria-pressed="false">Largest amount</button><span class="divider"></span><button type="button" class="you" data-filter="you" aria-pressed="false" title="Show only customers that need action">Needs action</button></div>
     <div class="cards" id="cards"></div>
     <p class="listed" id="listed"></p>
     <details class="rubric">
