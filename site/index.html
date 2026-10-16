@@ -285,7 +285,7 @@ details.guide>.sub.small{font-size:12px;color:var(--ink-3);margin:12px 0 16px}
     <span class="spacer"></span>
     <div class="tabs" role="tablist" aria-label="Data source">
       <button role="tab" id="tabDemo" type="button" aria-selected="true">Demo<span class="lg"> data</span></button>
-      <button role="tab" id="tabUpload" type="button" aria-selected="false">Upload CSV</button>
+      <button role="tab" id="tabUpload" type="button" aria-selected="false">Automation</button>
     </div>
     <details class="signoff" id="settings">
       <summary class="btn ghost" aria-label="Sign-off settings">Sign-off</summary>
@@ -354,7 +354,7 @@ details.guide>.sub.small{font-size:12px;color:var(--ink-3);margin:12px 0 16px}
 
   </div>
 
-  <section id="script">
+  <section id="script" hidden>
     <h2>Make it run itself</h2>
     <p class="sub">A Google Apps Script with the same aging, rubric and templates as this page (it's the same code). Every 14 days it reads the invoice export in a Sheet, saves one Gmail draft per customer for you to review, and posts the digest to Slack. Nothing sends without you.</p>
     <ol class="steps">

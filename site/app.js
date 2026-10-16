@@ -41,6 +41,7 @@
     $("tabDemo").setAttribute("aria-selected", tab === "demo");
     $("tabUpload").setAttribute("aria-selected", tab === "upload");
     $("uploadPanel").hidden = tab !== "upload";
+    $("script").hidden = tab !== "upload";
     if (tab === "demo") {
       $("results").hidden = false;
       if (!isDemo()) loadDemo();
