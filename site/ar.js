@@ -183,9 +183,9 @@
 
   var DEFAULT_SETTINGS = {
     senderName: "Your name",
-    senderRole: "Finance Operations, SnapMagic",
+    senderRole: "Your role, SnapMagic",
     founderName: "Founder name",
-    founderRole: "Co-founder & CEO, SnapMagic",
+    founderRole: "Founder, SnapMagic",
     arShareFlag: 0.2
   };
 

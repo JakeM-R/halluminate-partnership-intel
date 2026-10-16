@@ -10,47 +10,47 @@
   // [invoice, customer, email, apEmail, amount, paid, daysOverdue, status, paidDaysAfterDue]
   // daysOverdue: positive = past due at run date; negative = due in future; null = missing due date.
   var ROWS = [
-    ["INV-2201", "Customer A", "billing@customer-a.example", "", 2400, 0, 10, "Open", null],
-    ["INV-2102", "Customer A", "billing@customer-a.example", "", 1950, 1950, 160, "Paid", -2],
-    ["INV-2150", "Customer A", "billing@customer-a.example", "", 2100, 2100, 95, "Paid", 0],
+    ["DEMO-001", "Customer A", "billing@customer-a.example", "", 2400, 0, 10, "Open", null],
+    ["DEMO-002", "Customer A", "billing@customer-a.example", "", 1950, 1950, 160, "Paid", -2],
+    ["DEMO-003", "Customer A", "billing@customer-a.example", "", 2100, 2100, 95, "Paid", 0],
 
-    ["INV-2215", "Customer B", "billing@customer-b.example", "", 1850, 0, 5, "Open", null],
-    ["INV-2160", "Customer B", "billing@customer-b.example", "", 3200, 0, 40, "Open", null],
-    ["INV-2131", "Customer B", "billing@customer-b.example", "", 2950, 0, 70, "Open", null],
-    ["INV-2080", "Customer B", "billing@customer-b.example", "", 2600, 2600, 190, "Paid", 12],
-    ["INV-2095", "Customer B", "billing@customer-b.example", "", 2750, 2750, 150, "Paid", 20],
+    ["DEMO-004", "Customer B", "billing@customer-b.example", "", 1850, 0, 5, "Open", null],
+    ["DEMO-005", "Customer B", "billing@customer-b.example", "", 3200, 0, 40, "Open", null],
+    ["DEMO-006", "Customer B", "billing@customer-b.example", "", 2950, 0, 70, "Open", null],
+    ["DEMO-007", "Customer B", "billing@customer-b.example", "", 2600, 2600, 190, "Paid", 12],
+    ["DEMO-008", "Customer B", "billing@customer-b.example", "", 2750, 2750, 150, "Paid", 20],
 
-    ["INV-2190", "Customer C", "billing@customer-c.example", "", 5000, 2000, 22, "Partially paid", null],
+    ["DEMO-009", "Customer C", "billing@customer-c.example", "", 5000, 2000, 22, "Partially paid", null],
 
-    ["INV-2172", "Customer D", "billing@customer-d.example", "", 4100, 0, 35, "Disputed", null],
+    ["DEMO-010", "Customer D", "billing@customer-d.example", "", 4100, 0, 35, "Disputed", null],
 
-    ["INV-2088", "Customer E", "billing@customer-e.example", "", 6200, 0, 120, "Open", null],
+    ["DEMO-011", "Customer E", "billing@customer-e.example", "", 6200, 0, 120, "Open", null],
 
-    ["INV-2168", "Customer F", "billing@customer-f.example", "payables@customer-f.example", 2800, 0, 45, "Open", null],
-    ["INV-2230", "Customer F", "billing@customer-f.example", "payables@customer-f.example", 1500, 0, -12, "Open", null],
-    ["INV-2110", "Customer F", "billing@customer-f.example", "payables@customer-f.example", 2300, 2300, 140, "Paid", 9],
+    ["DEMO-012", "Customer F", "billing@customer-f.example", "payables@customer-f.example", 2800, 0, 45, "Open", null],
+    ["DEMO-013", "Customer F", "billing@customer-f.example", "payables@customer-f.example", 1500, 0, -12, "Open", null],
+    ["DEMO-014", "Customer F", "billing@customer-f.example", "payables@customer-f.example", 2300, 2300, 140, "Paid", 9],
 
-    ["INV-2196", "Customer G", "", "", 1900, 0, 18, "Open", null],
+    ["DEMO-015", "Customer G", "", "", 1900, 0, 18, "Open", null],
 
-    ["INV-2235", "Customer H", "billing@customer-h.example", "", 3400, 0, -20, "Open", null],
-    ["INV-2240", "Customer H", "billing@customer-h.example", "", 2600, 0, -25, "Open", null],
-    ["INV-2117", "Customer H", "billing@customer-h.example", "", 2900, 2900, 135, "Paid", -3],
+    ["DEMO-016", "Customer H", "billing@customer-h.example", "", 3400, 0, -20, "Open", null],
+    ["DEMO-017", "Customer H", "billing@customer-h.example", "", 2600, 0, -25, "Open", null],
+    ["DEMO-018", "Customer H", "billing@customer-h.example", "", 2900, 2900, 135, "Paid", -3],
 
-    ["INV-2238", "Customer I", "billing@customer-i.example", "", 1800, 0, -15, "Open", null],
-    ["INV-2246", "Customer I", "billing@customer-i.example", "", 1200, 0, -5, "Open", null],
+    ["DEMO-019", "Customer I", "billing@customer-i.example", "", 1800, 0, -15, "Open", null],
+    ["DEMO-020", "Customer I", "billing@customer-i.example", "", 1200, 0, -5, "Open", null],
 
-    ["INV-2205", "Customer J", "billing@customer-j.example", "payables@customer-j.example", 10400, 0, 8, "Open", null],
-    ["INV-2071", "Customer J", "billing@customer-j.example", "payables@customer-j.example", 8800, 8800, 200, "Paid", 16],
-    ["INV-2125", "Customer J", "billing@customer-j.example", "payables@customer-j.example", 9100, 9100, 110, "Paid", 7],
+    ["DEMO-021", "Customer J", "billing@customer-j.example", "payables@customer-j.example", 10400, 0, 8, "Open", null],
+    ["DEMO-022", "Customer J", "billing@customer-j.example", "payables@customer-j.example", 8800, 8800, 200, "Paid", 16],
+    ["DEMO-023", "Customer J", "billing@customer-j.example", "payables@customer-j.example", 9100, 9100, 110, "Paid", 7],
 
-    ["INV-2120", "Customer K", "billing@customer-k.example", "", 1600, 1600, 130, "Paid", 0],
-    ["INV-2199", "Customer K", "billing@customer-k.example", "", -450, 0, 20, "Open", null],
-    ["INV-2185", "Customer K", "billing@customer-k.example", "", 1200, 1200, 25, "Open", null],
+    ["DEMO-024", "Customer K", "billing@customer-k.example", "", 1600, 1600, 130, "Paid", 0],
+    ["DEMO-025", "Customer K", "billing@customer-k.example", "", -450, 0, 20, "Open", null],
+    ["DEMO-026", "Customer K", "billing@customer-k.example", "", 1200, 1200, 25, "Open", null],
 
-    ["INV-2222", "Customer L", "billing@customer-l.example", "", 1200, 0, 3, "Open", null],
-    ["INV-2222", "Customer L", "billing@customer-l.example", "", 1200, 0, 3, "Open", null],
-    ["INV-2228", "Customer L", "billing@customer-l.example", "", 900, 0, null, "Open", null],
-    ["INV-2141", "Customer L", "billing@customer-l.example", "", 1350, 1350, 120, "Paid", -1]
+    ["DEMO-027", "Customer L", "billing@customer-l.example", "", 1200, 0, 3, "Open", null],
+    ["DEMO-027", "Customer L", "billing@customer-l.example", "", 1200, 0, 3, "Open", null],
+    ["DEMO-028", "Customer L", "billing@customer-l.example", "", 900, 0, null, "Open", null],
+    ["DEMO-029", "Customer L", "billing@customer-l.example", "", 1350, 1350, 120, "Paid", -1]
 
   ];
 
