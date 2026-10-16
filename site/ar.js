@@ -488,7 +488,7 @@
     var billing = res.customers.filter(function (c) { return c.action === "billing"; }).length;
     var l1 = "AR run " + fmtShortDate(res.runDate) + ": " + fmtK(res.totalAR) + " outstanding, " + fmtK(res.over30) + " over 30 days, " + res.toChase + " customer" + (res.toChase === 1 ? "" : "s") + " to chase.";
     var l2 = needs.length
-      ? "Needs you: " + needs.slice(0, 4).map(function (c) { return c.name.slice(0, 40) + " (" + fmtK(c.balance) + ", " + c.oldestDays + "d)"; }).join("; ") + (needs.length > 4 ? "; +" + (needs.length - 4) + " more" : "") + "."
+      ? "Needs you: " + needs.slice(0, 4).map(function (c) { return c.name.slice(0, 40) + " (" + fmtK(c.balance) + ", " + c.oldestDays + " days overdue)"; }).join("; ") + (needs.length > 4 ? "; +" + (needs.length - 4) + " more" : "") + "."
       : "Nothing needs you this run.";
     var l3 = "Drafts ready: " + drafts + " chaser" + (drafts === 1 ? "" : "s") + (billing ? ", " + billing + " billing repl" + (billing === 1 ? "y" : "ies") : "") + ". Next run " + fmtShortDate(res.nextRun) + ".";
     // Slack treats <, > and & as control characters; customer names are data, not markup.

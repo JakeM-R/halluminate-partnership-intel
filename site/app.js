@@ -252,7 +252,7 @@
       var meta = [];
       if (isDemo()) meta.push('<span class="tag demo">Demo</span>');
       if (c.needsYou) meta.push('<span class="tag you">Needs you</span>');
-      meta.push("<span>" + (c.tier ? "Tier " + c.tier + " · oldest " + c.oldestDays + "d" : "Not yet due") + "</span>");
+      meta.push("<span>" + (c.tier ? c.oldestDays + " days overdue" : "Not yet due") + "</span>");
       return "<tr><td class=\"name\"><div class=\"n\">" + esc(c.name) + '</div><div class="meta">' + meta.join("") + "</div></td>" +
         AR.BUCKETS.map(function (b) { var v = c.buckets[b.key]; return '<td class="b' + (v ? "" : " zero") + '">' + (v ? money(v) : "–") + "</td>"; }).join("") +
         '<td class="tot">' + money(c.balance) + '</td><td class="barcell"><div class="bar" role="img" aria-label="' + esc(c.name) + " aging split\">" + bar + "</div></td></tr>";
@@ -286,7 +286,7 @@
     shown.sort(function (a, b) { return (b.needsYou - a.needsYou) || (b.tier - a.tier) || (b.balance - a.balance); });
     $("cards").innerHTML = shown.map(function (c) {
       var d = state.drafts[c.id];
-      var facts = money(c.balance) + " open · " + c.invoices.length + " invoice" + (c.invoices.length === 1 ? "" : "s") + " · oldest " + c.oldestDays + "d overdue";
+      var facts = money(c.balance) + " open · " + c.invoices.length + " invoice" + (c.invoices.length === 1 ? "" : "s") + " · " + c.oldestDays + " days overdue";
       var flags = c.flags.map(function (f) { return "<li>" + esc(mask(f)) + "</li>"; });
       if (c.toneNote && c.action === "chase") flags.push('<li class="tone">' + esc(c.toneNote) + "</li>");
       if (d.rejected) flags.push("<li>Claude draft failed a rule check (" + esc(mask(d.rejected[0])) + "), template used</li>");
