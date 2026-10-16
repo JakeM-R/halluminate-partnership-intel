@@ -160,10 +160,10 @@
   function requestModelDrafts() {
     var res = state.result;
     var targets = res.customers.filter(function (c) { return c.action === "chase" || c.action === "billing"; });
-    if (!WORKER_URL) { setStatus("", "Drafts: fixed templates per tier (Claude drafting not configured)"); return; }
+    if (!WORKER_URL) { setStatus("", "Drafts: fixed templates per tier (AI drafting not configured)"); return; }
     if (!targets.length) { setStatus("", "Nothing to draft this run"); return; }
     var runId = ++state.runId;
-    setStatus("busy", "Drafting with Claude… templates shown meanwhile");
+    setStatus("busy", "Drafting with AI… templates shown meanwhile");
     var ctrl = new AbortController();
     var timer = setTimeout(function () { ctrl.abort(); }, 45000);
     fetch(WORKER_URL, {
@@ -185,11 +185,11 @@
       });
       state.draftMode = "claude";
       renderCards();
-      setStatus("ok", "Drafted by Claude: " + used + (rejected ? " · " + rejected + " fell back to template after failing a rule check" : "") + ". Every draft is checked against the rules before it's shown.");
+      setStatus("ok", "Drafted by AI: " + used + (rejected ? " · " + rejected + " fell back to template after failing a rule check" : "") + ". Every draft is checked against the rules before it's shown.");
     }).catch(function () {
       clearTimeout(timer);
       if (runId !== state.runId) return;
-      setStatus("", "Claude unavailable right now, so these are the fixed templates per tier");
+      setStatus("", "AI drafting unavailable right now, so these are the fixed templates per tier");
     });
   }
 
@@ -290,7 +290,7 @@
       var facts = money(c.balance) + " open · " + c.invoices.length + " invoice" + (c.invoices.length === 1 ? "" : "s") + " · " + c.oldestDays + " days overdue";
       var flags = c.flags.map(function (f) { return "<li>" + esc(mask(f)) + "</li>"; });
       if (c.toneNote && c.action === "chase") flags.push('<li class="tone">' + esc(c.toneNote) + "</li>");
-      if (d.rejected) flags.push("<li>Claude draft failed a rule check (" + esc(mask(d.rejected[0])) + "), template used</li>");
+      if (d.rejected) flags.push("<li>AI draft failed a rule check (" + esc(mask(d.rejected[0])) + "), template used</li>");
       var why = c.tier === 5 ? "Over 90 days. This needs a call from you, not another email."
         : !c.email ? "No contact email in the export. Fix the record and re-run."
         : "Check this account before anything goes out.";
@@ -311,7 +311,7 @@
           '<textarea data-id="' + c.id + '" aria-label="Email body" spellcheck="true">' + esc(d.body) + "</textarea>" +
           '<div class="ft"><button class="btn primary" type="button" data-copy="' + c.id + '">Copy</button>' +
           '<a class="btn" target="_blank" rel="noopener" data-gmail="' + c.id + '" href="' + gmailUrl(d) + '">Open in Gmail</a>' +
-          '<span class="src">' + (d.source === "claude" ? "Drafted by Claude" : "Template") + (state.dirty[c.id] ? " · edited" : "") + "</span></div></div>";
+          '<span class="src">' + (d.source === "claude" ? "Drafted by AI" : "Template") + (state.dirty[c.id] ? " · edited" : "") + "</span></div></div>";
       }
       return '<details class="card' + (c.needsYou ? " you" : "") + '" data-card="' + c.id + '"' + (state.open[c.id] ? " open" : "") + ">" + summary + bd + "</details>";
     }).join("");
@@ -344,7 +344,7 @@
       "<li><b>No late payments in 12 months:</b> tone one step softer. <b>Two or more:</b> one step firmer. Tier stays for routing.</li>" +
       "<li><b>Over 20% of total AR:</b> flagged “Needs you”, still drafted.</li>" +
       "<li><b>Missing contact email:</b> no draft, flagged for data cleanup.</li>" +
-      "<li><b>Hard rules:</b> figures only from the export, no legal or collections language, no fees unless the terms state one, under 120 words, no exclamation marks. Claude's drafts are checked against these and replaced by the template if they fail.</li></ul>";
+      "<li><b>Hard rules:</b> figures only from the export, no legal or collections language, no fees unless the terms state one, under 120 words, no exclamation marks. AI drafts are checked against these and replaced by the template if they fail.</li></ul>";
   }
 
   // ---------- Copy helpers ----------
