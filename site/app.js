@@ -70,17 +70,18 @@
     $("tplBtn").addEventListener("click", downloadTemplate);
   }
 
+  // One header name per column, the same as the template. Other common names are matched automatically.
+  var GUIDE_HEADERS = { invoice: "Invoice number", customer: "Company name", email: "Contact email", ccEmail: "AP email",
+    amount: "Amount", paid: "Amount paid", balance: "Open balance", issueDate: "Invoice date", dueDate: "Due date",
+    status: "Status", terms: "Terms", paidDate: "Paid date" };
+
   function renderGuide() {
     var need = function (f) {
       return f.required ? '<span class="need req">Required</span>' : f.recommended ? '<span class="need rec">Recommended</span>' : '<span class="need opt">Optional</span>';
     };
-    var title = function (s) {
-      return s.split(" ").map(function (w) { return /^(ap|cc|id)$/.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1); }).join(" ");
-    };
-    $("guideTable").innerHTML = "<table><thead><tr><th>Column</th><th></th><th>What it's used for</th><th>Headers recognised</th></tr></thead><tbody>" +
+    $("guideTable").innerHTML = "<table><thead><tr><th>Column</th><th></th><th>What it's used for</th></tr></thead><tbody>" +
       AR.FIELDS.map(function (f) {
-        return '<tr><td class="f">' + esc(f.label) + "</td><td>" + need(f) + '</td><td class="u">' + esc(f.use) + '</td><td class="h">' +
-          f.syn.slice(0, 4).map(function (s) { return "<code>" + esc(title(s)) + "</code>"; }).join("") + "</td></tr>";
+        return '<tr><td class="f">' + esc(GUIDE_HEADERS[f.key]) + "</td><td>" + need(f) + '</td><td class="u">' + esc(f.use) + "</td></tr>";
       }).join("") + "</tbody></table>";
   }
 
