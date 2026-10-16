@@ -240,3 +240,11 @@ test("Apps Script: core plus runner saves Gmail drafts, posts the digest and set
   assert.match(JSON.parse(posts[0].o.payload).text, /outstanding/);
   assert.strictEqual(log.length, 2);
 });
+
+test("last contacted takes the latest date per customer and ignores future dates", () => {
+  const H = "Invoice number,Company name,Contact email,Amount,Due date,Last contacted";
+  const csv = [H, `A-1,Co,a@x.com,100,${iso(20)},${iso(9)}`, `A-2,Co,a@x.com,100,${iso(5)},${iso(4)}`, `A-3,Co,a@x.com,100,${iso(2)},${iso(-3)}`].join("\n");
+  const p = AR.parseCSV(csv);
+  const c = AR.analyze(p.rows, AR.autoMap(p.headers), RUN).customers[0];
+  assert.strictEqual(c.lastContacted, RUN - 4 * DAY);
+});

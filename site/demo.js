@@ -54,7 +54,10 @@
 
   ];
 
-  var HEADERS = ["Invoice number", "Company name", "Contact email", "AP email", "Amount", "Amount paid", "Invoice date", "Due date", "Status", "Terms", "Paid date"];
+  var HEADERS = ["Invoice number", "Company name", "Contact email", "AP email", "Amount", "Amount paid", "Invoice date", "Due date", "Status", "Terms", "Paid date", "Last contacted"];
+
+  // Days before the run date that each customer was last chased. Absent means never.
+  var LAST_CONTACT = { "Customer B": 14, "Customer C": 7, "Customer D": 12, "Customer E": 30, "Customer F": 10, "Customer J": 5 };
 
   function iso(t) { return new Date(t).toISOString().slice(0, 10); }
   function q(v) { v = String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
@@ -66,7 +69,7 @@
       var due = r[6] == null ? null : run - r[6] * DAY;
       var issue = (due == null ? run - 40 * DAY : due - 30 * DAY);
       var paidDate = r[8] == null ? "" : iso(due + r[8] * DAY);
-      lines.push([r[0], r[1], r[2], r[3], r[4].toFixed(2), r[5].toFixed(2), iso(issue), due == null ? "" : iso(due), r[7], "Net 30", paidDate].map(q).join(","));
+      lines.push([r[0], r[1], r[2], r[3], r[4].toFixed(2), r[5].toFixed(2), iso(issue), due == null ? "" : iso(due), r[7], "Net 30", paidDate, LAST_CONTACT[r[1]] != null && r[7] !== "Paid" ? iso(run - LAST_CONTACT[r[1]] * DAY) : ""].map(q).join(","));
     });
     return lines.join("\n");
   }

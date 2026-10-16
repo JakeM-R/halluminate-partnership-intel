@@ -10,7 +10,7 @@
 
   var state = {
     source: "demo", fileName: "", rows: [], headers: [], map: {},
-    sort: { aging: "overdue", drafts: "overdue" }, onlyYou: { aging: false, drafts: false }, tab: "demo", runDate: todayUTC(), settings: Object.assign({}, AR.DEFAULT_SETTINGS),
+    ticks: {}, sort: { aging: "overdue", drafts: "overdue" }, onlyYou: { aging: false, drafts: false }, tab: "demo", runDate: todayUTC(), settings: Object.assign({}, AR.DEFAULT_SETTINGS),
     result: null, drafts: {}, dirty: {}, open: {}, draftMode: "template", runId: 0
   };
 
@@ -74,7 +74,7 @@
   // One header name per column, the same as the template. Other common names are matched automatically.
   var GUIDE_HEADERS = { invoice: "Invoice number", customer: "Company name", email: "Contact email", ccEmail: "AP email",
     amount: "Amount", paid: "Amount paid", balance: "Open balance", issueDate: "Invoice date", dueDate: "Due date",
-    status: "Status", terms: "Terms", paidDate: "Paid date" };
+    status: "Status", terms: "Terms", paidDate: "Paid date", lastContacted: "Last contacted" };
 
   function renderGuide() {
     var need = function (f) {
@@ -88,9 +88,9 @@
 
   function downloadTemplate() {
     var lines = [
-      "Invoice number,Company name,Contact email,AP email,Amount,Amount paid,Invoice date,Due date,Status,Terms,Paid date",
-      "DEMO-001,Customer A,billing@customer-a.example,,1000.00,0.00,2026-09-01,2026-10-01,Open,Net 30,",
-      "DEMO-002,Customer A,billing@customer-a.example,,500.00,500.00,2026-07-01,2026-07-31,Paid,Net 30,2026-08-05"
+      "Invoice number,Company name,Contact email,AP email,Amount,Amount paid,Invoice date,Due date,Status,Terms,Paid date,Last contacted",
+      "DEMO-001,Customer A,billing@customer-a.example,,1000.00,0.00,2026-09-01,2026-10-01,Open,Net 30,,2026-10-08",
+      "DEMO-002,Customer A,billing@customer-a.example,,500.00,500.00,2026-07-01,2026-07-31,Paid,Net 30,2026-08-05,"
     ];
     var a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" }));
@@ -149,8 +149,33 @@
 
   // ---------- Run ----------
 
+  // ---------- Actioned ticks ----------
+  // Per-viewer convenience kept in this browser only. A tick clears Needs action and logs
+  // the run date as the last contact.
+  function tickKey(c) { return "arc:actioned:" + (isDemo() ? "demo" : state.fileName) + ":" + c.name; }
+  function readTick(c) { try { return localStorage.getItem(tickKey(c)); } catch (e) { return state.ticks[tickKey(c)] || null; } }
+  function writeTick(c, val) {
+    state.ticks[tickKey(c)] = val;
+    try { if (val) localStorage.setItem(tickKey(c), val); else localStorage.removeItem(tickKey(c)); } catch (e) { /* memory only */ }
+  }
+  function applyTicks(res) {
+    res.customers.forEach(function (c) {
+      if (c.flaggedNeeds == null) { c.flaggedNeeds = c.needsYou; c.importedContact = c.lastContacted; }
+      var t = readTick(c);
+      c.actioned = !!t && c.tier >= 1;
+      c.needsYou = c.flaggedNeeds && !c.actioned;
+      c.lastContacted = c.actioned ? Math.max(AR.parseDate(t), c.importedContact || 0) : c.importedContact;
+    });
+  }
+  function contactText(c) {
+    if (c.lastContacted == null) return "No contact logged";
+    var d = Math.round((state.runDate - c.lastContacted) / DAY);
+    return "Last contacted " + AR.fmtShortDate(c.lastContacted) + (d === 0 ? " (today)" : " (" + d + (d === 1 ? " day" : " days") + " ago)");
+  }
+
   function runAnalysis() {
     state.result = AR.analyze(state.rows, state.map, state.runDate, state.settings);
+    applyTicks(state.result);
     state.drafts = {}; state.dirty = {}; state.draftMode = "template";
     state.result.customers.forEach(function (c, i) { c.id = i; state.drafts[i] = maskDraft(AR.templateDraft(c, state.runDate, state.settings)); });
     render();
@@ -261,7 +286,8 @@
       var meta = [];
       if (isDemo()) meta.push('<span class="tag demo">Demo</span>');
       if (c.needsYou) meta.push('<span class="tag you">Needs action</span>');
-      meta.push("<span>" + (c.tier ? c.oldestDays + " days overdue" : "Not yet due") + "</span>");
+      if (c.actioned) meta.push('<span class="tag done">Actioned</span>');
+      meta.push("<span>" + (c.tier ? c.oldestDays + " days overdue · " + esc(contactText(c).replace("Last contacted", "contacted").replace("No contact logged", "no contact logged")) : "Not yet due") + "</span>");
       return "<tr><td class=\"name\"><div class=\"n\">" + esc(c.name) + '</div><div class="meta">' + meta.join("") + "</div></td>" +
         AR.BUCKETS.map(function (b) { var v = c.buckets[b.key]; return '<td class="b' + (v ? "" : " zero") + '">' + (v ? money(v) : "–") + "</td>"; }).join("") +
         '<td class="tot">' + money(c.balance) + '</td><td class="barcell"><div class="bar" role="img" aria-label="' + esc(c.name) + " aging split\">" + bar + "</div></td></tr>";
@@ -302,11 +328,14 @@
       var why = c.tier === 5 ? "Over 90 days. This needs a call from you, not another email."
         : !c.email ? "No contact email in the export. Fix the record and re-run."
         : "Check this account before anything goes out.";
-      var preview = d.body ? d.subject : why;
+      var preview = d.body ? "Draft ready: " + d.subject : why;
       var summary = '<summary><div class="sl"><div class="cname">' + esc(c.name) + "</div>" +
         '<div class="facts num">' + (isDemo() ? '<span class="tag demo">Demo</span> ' : "") + facts + "</div>" +
+        '<div class="contact">' + esc(contactText(c)) + "</div>" +
         '<div class="preview">' + esc(preview) + "</div></div>" +
         '<div class="sr2">' + (c.needsYou ? '<span class="tag you">Needs action</span>' : "") + tierBadge(c) +
+        '<span class="act' + (c.actioned ? " on" : "") + '" data-act="' + c.id + '" role="checkbox" tabindex="0" aria-checked="' + c.actioned + '" title="Tick once handled. Clears Needs action and logs today as last contacted.">' +
+        '<input type="checkbox" tabindex="-1" aria-hidden="true"' + (c.actioned ? " checked" : "") + '>Actioned</span>' +
         '<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></summary>';
       var fl = flags.length ? '<ul class="flags">' + flags.join("") + "</ul>" : "";
       var bd;
@@ -321,7 +350,7 @@
           '<a class="btn" target="_blank" rel="noopener" data-gmail="' + c.id + '" href="' + gmailUrl(d) + '">Open in Gmail</a>' +
           '<span class="src">' + (d.source === "claude" ? "Drafted by AI" : "Template") + (state.dirty[c.id] ? " · edited" : "") + "</span></div></div>";
       }
-      return '<details class="card' + (c.needsYou ? " you" : "") + '" data-card="' + c.id + '"' + (state.open[c.id] ? " open" : "") + ">" + summary + bd + "</details>";
+      return '<details class="card' + (c.needsYou ? " you" : "") + (c.actioned ? " done" : "") + '" data-card="' + c.id + '"' + (state.open[c.id] ? " open" : "") + ">" + summary + bd + "</details>";
     }).join("");
 
     document.querySelectorAll("#cards textarea").forEach(fit);
@@ -432,6 +461,10 @@
     if (el.open) el.querySelectorAll("textarea").forEach(fit);
   }, true);
 
+  $("cards").addEventListener("keydown", function (e) {
+    if ((e.key === " " || e.key === "Enter") && e.target.dataset && e.target.dataset.act != null) { e.preventDefault(); e.target.click(); }
+  });
+
   $("cards").addEventListener("input", function (e) {
     var id = e.target.dataset.id; if (id == null) return;
     var d = state.drafts[id];
@@ -440,6 +473,17 @@
     var a = document.querySelector('[data-gmail="' + id + '"]'); if (a) a.href = gmailUrl(d);
   });
   $("cards").addEventListener("click", function (e) {
+    var act = e.target.closest && e.target.closest("[data-act]");
+    if (act) {
+      // Handle the tick ourselves so the click doesn't also open or close the card.
+      e.preventDefault();
+      var c = state.result.customers[act.dataset.act];
+      writeTick(c, c.actioned ? null : AR.isoDate(state.runDate));
+      applyTicks(state.result);
+      render();
+      var again = document.querySelector('[data-act="' + c.id + '"]'); if (again) again.focus();
+      return;
+    }
     var id = e.target.dataset.copy; if (id == null) return;
     var d = state.drafts[id];
     copy("Subject: " + d.subject + "\n\n" + d.body, e.target);

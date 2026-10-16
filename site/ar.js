@@ -59,7 +59,8 @@
     { key: "dueDate", label: "Due date", required: true, use: "Sets days overdue, bucket and tier. Rows without one are excluded.", syn: ["due date", "due", "payment due date", "due on"] },
     { key: "status", label: "Status", use: "Paid or void rows are excluded. Disputed gets a billing reply instead of a chaser.", recommended: true, syn: ["status", "invoice status", "payment status", "state"] },
     { key: "terms", label: "Terms", use: "A fee can be mentioned only if the terms state one.", syn: ["terms", "payment terms", "net terms"] },
-    { key: "paidDate", label: "Paid date (for late history)", use: "Late-payment history on settled invoices, which softens or firms the tone.", syn: ["paid date", "date paid", "payment date", "paid on", "last payment date"] }
+    { key: "paidDate", label: "Paid date (for late history)", use: "Late-payment history on settled invoices, which softens or firms the tone.", syn: ["paid date", "date paid", "payment date", "paid on", "last payment date"] },
+    { key: "lastContacted", label: "Last contacted", use: "Shown on each overdue customer, so you can see when they were last chased.", syn: ["last contacted", "last contact", "last contact date", "last reminder", "last reminder sent", "last chased"] }
   ];
 
   function norm(s) { return String(s || "").toLowerCase().replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim(); }
@@ -204,7 +205,7 @@
 
     function cust(name) {
       var key = name.toLowerCase();
-      if (!customers[key]) customers[key] = { name: name, email: "", ccEmail: "", terms: "", invoices: [], flags: [], dupes: [] };
+      if (!customers[key]) customers[key] = { name: name, email: "", ccEmail: "", terms: "", invoices: [], flags: [], dupes: [], lastContacted: null };
       return customers[key];
     }
 
@@ -244,6 +245,8 @@
       if (!c.email && g(r, "email")) c.email = String(g(r, "email")).trim();
       if (!c.ccEmail && g(r, "ccEmail")) c.ccEmail = String(g(r, "ccEmail")).trim();
       if (!c.terms && g(r, "terms")) c.terms = String(g(r, "terms")).trim();
+      var lc = parseDate(g(r, "lastContacted"));
+      if (lc != null && lc <= run && (c.lastContacted == null || lc > c.lastContacted)) c.lastContacted = lc;
       var days = Math.round((run - due) / DAY);
       c.invoices.push({
         invoice: inv, amount: amount, paid: paid > 0 ? paid : 0, balance: balance,
